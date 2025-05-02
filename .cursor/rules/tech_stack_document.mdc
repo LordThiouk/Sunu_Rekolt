@@ -1,0 +1,120 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+-----------------
+
+# Tech Stack Document — Sunu Rekolt
+
+Ce document détaille les technologies utilisées pour construire Sunu Rekolt, une application mobile/web qui connecte les agriculteurs et les acheteurs de produits agricoles au Sénégal. Il couvre le frontend, le backend, l'infrastructure, les intégrations tierces, et les considérations de performance et sécurité.
+
+---
+
+## 1. Technologies Frontend
+
+**Framework principal** :
+
+* **React Native (via Expo SDK 50)** : permet de développer une app unique pour Android, iOS et Web.
+* **React Native Web** : permet de réutiliser le même code pour publier une version web.
+
+**Composants clés :**
+
+* **Supabase Auth** pour l'authentification.
+* **Navigation** basée sur des layouts `(auth)`, `(tabs)` (app directory).
+* **UI Kit** : composants personnalisés (`Button`, `ProductCard`, etc.) avec thématisation via Tailwind-like styling ou styled-components (optionnel).
+
+**Pourquoi ces choix ?**
+
+* Une seule base de code pour toutes les plateformes.
+* Architecture modulaire avec navigation par dossier.
+* Intégration rapide avec Supabase pour API + stockage + auth.
+
+---
+
+## 2. Backend Technologies
+
+**Plateforme Backend** : Supabase
+
+* **Base de données** : PostgreSQL (hébergée)
+* **Authentification** : téléphone + mot de passe (Twilio)
+* **Storage** : Supabase Storage pour images produits, documents
+* **Fonctions Edge** : refund(), SMS, score fiabilité (à venir)
+* **RLS** : Row Level Security activée avec policies spécifiques (par rôle)
+
+**Local Storage (offline)** :
+
+* **Context API / Zustand** pour état global
+* **SQLite ou Expo Secure Store** pour stockage local sécurisé
+
+---
+
+## 3. Infrastructure & Déploiement
+
+* **Version Control** : Git avec GitHub
+* **CI/CD** : GitHub Actions (tests, lint, build auto)
+* **Backend Hosting** : Supabase (AWS)
+* **Web Hosting** : Vercel (optionnel)
+* **App Mobile** : Android (Play Store), iOS (TestFlight / App Store futur)
+
+**Avantages** :
+
+* Déploiement rapide et fiable
+* Sauvegardes automatiques Supabase
+* Aucun serveur à maintenir
+
+---
+
+## 4. Intégrations Tierces
+
+**Paiements** :
+
+* **PayDunya** : Orange Money, Wave, cartes bancaires (2% frais par transaction)
+* **Webhooks sécurisés** : refund() déclenché via Supabase Edge
+
+**Notifications** :
+
+* **Twilio** : pour envoi de SMS de confirmation
+* **Firebase Cloud Messaging** (futur) : pour notifications push
+
+**Développement assisté par IA** :
+
+* **Cursor** : IDE VS Code avec assistant intégré
+
+
+---
+
+## 5. Sécurité & Performance
+
+**Sécurité** :
+
+* **RLS Supabase** : policies par rôle strictes
+* **HTTPS (TLS 1.2+)** : activé par défaut
+* **Chiffrement au repos** : AES-256
+* **JWT Tokens** : sessions temporisées, cookies `secure`
+* **Logs & audits** : `notifications`, `refunds`, `updated_at` triggers
+
+**Performance** :
+
+* **Chargement catalogue** : < 800 ms
+* **Validation livraison** : < 200 ms côté agriculteur
+* **SMS confirmation** : < 2 secondes
+
+---
+
+## 6. Synthèse
+
+Sunu Rekolt repose sur un stack moderne, mobile-first et low-overhead :
+
+* **React Native + Supabase** = rapidité de livraison
+* **Stockage local chiffré** = fonctionnement sans connexion
+* **Intégrations prêtes à l’emploi** = PayDunya, Twilio
+* **CI/CD automatisé** = livraison continue fiable
+
+Cette stack permet de répondre aux enjeux du terrain : fiabilité, accessibilité mobile, paiements sécurisés et livraison fluide d’un MVP complet.
+

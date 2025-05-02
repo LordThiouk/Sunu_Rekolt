@@ -1,0 +1,106 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+-----------------
+
+# Project Requirements Document (PRD) — Sunu Rekolt
+
+**Project:** Sunu Rekolt – Marketplace Agricole
+**Date:** 2025-05-02
+
+## 1. Project Overview
+
+**Objectif** : Construire une application mobile (React Native avec Supabase) qui met en relation les **agriculteurs** et les **acheteurs** au Sénégal pour faciliter la vente de produits agricoles (légumes, céréales, etc.). L'app permet aux producteurs de publier leurs récoltes, aux acheteurs de commander et payer via mobile money, avec une gestion intégrée de la fiabilité, des livraisons, et des micro-services (crédit, boutique d’intrants, etc.).
+
+Le projet vise à réduire la perte post-récolte, améliorer l’accès au marché et renforcer la transparence des échanges. L’approche est mobile-first, simple, et utilisable hors connexion partielle.
+
+## 2. In-Scope vs. Out-of-Scope
+
+**In-Scope (MVP v1.0)**
+
+* Authentification via numéro de téléphone (Twilio)
+* Gestion des rôles : agriculteur, acheteur, admin
+* Ajout & validation produits (nom, photo, prix, unité, stock, catégorie)
+* Paiement via PayDunya (OM, Wave)
+* Commande et historique commandes (par statut)
+* Affichage numéro téléphone post-commande pour appel direct
+* Notifications SMS pour agriculteur (nouvelle commande)
+* Dashboard vendeur (commandes, fiabilité, produits)
+* Page produit, boutique intrants (lecture seule)
+* Back-office admin : validation produits, stats, remboursements
+* Page confirmation avec bouton "confirmer réception"
+* Système de fiabilité vendeur
+
+**Out-of-Scope**
+
+* Module microcrédit (phase 2)
+* Coopératives et regroupements (phase 2)
+* Paiement automatisé post-réception (phase 2)
+* Livraison via prestataire tiers (MVP = vendeur livre lui-même)
+* Interface web (MVP = uniquement mobile)
+* Multi-langues (autre que FR)
+
+## 3. User Flow
+
+**Acheteur**
+
+1. Crée compte → Parcours catalogue → Commande → Paiement → Confirmation → Suivi commande → Réception
+
+**Agriculteur**
+
+1. Crée compte → Ajoute produit → Attend validation admin → Reçoit commande (par SMS) → Livre → Attente confirmation acheteur
+
+**Admin**
+
+1. Accède à back-office → Valide produits → Gère remboursements/statistiques
+
+## 4. Core Features
+
+* Authentification : numéro + mot de passe + OTP Twilio
+* CRUD produit (farmer), validation admin
+* Gestion commandes (par statut : initiated, paid, delivering, delivered, received)
+* Paiement PayDunya avec commission 10% (plateforme absorbe 2% × 2 frais)
+* Téléphone affiché post-commande uniquement via RLS sécurisée
+* Notifications SMS (via Edge Function)
+* Affichage score fiabilité (calculé selon règles livraison, annulation, etc.)
+* Page boutique intrants en lecture seule
+* Refund (Edge Function + table `refunds`)
+
+## 5. Tech Stack
+
+* **Frontend**: React Native (Expo Router, Context API)
+* **Backend**: Supabase (Auth, DB, Storage, Edge functions)
+* **Paiement**: PayDunya API
+* **SMS**: Twilio API (Edge Trigger)
+* **CI/CD**: Expo + GitHub Actions
+
+## 6. Non‑Functional Requirements
+
+* Affichage rapide liste produits (≤1s)
+* Sécurité RLS + chiffrement des téléphones/CNI
+* UX optimisée mobile (max 5 onglets)
+* Données personnelles supprimées après 90 jours inactifs
+* Compatible hors ligne pour livraison (plus tard)
+
+## 7. Contraintes et Assumptions
+
+* Le vendeur fait sa propre livraison
+* Confirmation manuelle = déclenche paiement (future automatisation)
+* Commission de 10% = couvre frais PayDunya
+* Politique de remboursement active → stockée en base (manual/admin)
+
+## 8. Known Risks
+
+* Réseau faible des agriculteurs → fallback SMS essentiel
+* Risque de commandes hors plateforme → stratégie fidélisation + scoring
+* Refus de commandes → impact fiabilité + potentiel blacklist
+
+Ce PRD sert de base aux documents techniques (backend, frontend, flows) et à l’évolution MVP. Il est mis à jour à chaque phase. Toute modification majeure (ajout microcrédit, coopératives, etc.) déclenchera une nouvelle version.
+

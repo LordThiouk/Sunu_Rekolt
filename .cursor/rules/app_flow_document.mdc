@@ -1,0 +1,155 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+-----------------
+
+# App Flow Document — Sunu Rekolt
+
+## Onboarding and Sign-In/Sign-Up
+
+Lorsqu’un nouvel utilisateur ouvre l’application Sunu Rekolt pour la première fois, il accède à une page d’accueil proposant deux options : se connecter ou créer un compte.
+
+Un **agriculteur** choisit “Créer un compte”, sélectionne le rôle “Agriculteur”, entre son numéro de téléphone, un mot de passe, et reçoit un code de vérification par SMS (via Twilio). Une fois le code validé, il accepte les CGU et est redirigé vers son tableau de bord personnel.
+
+Un **acheteur** suit un parcours similaire, mais avec moins d’informations à fournir (nom, numéro, mot de passe).
+
+Un **administrateur** ne peut pas s’inscrire lui-même. Les comptes admin sont créés manuellement. Ils se connectent via une interface séparée (web) avec identifiant/mot de passe.
+
+En cas d’oubli de mot de passe, un lien ou code de réinitialisation est envoyé par SMS. L’utilisateur accède à une page pour définir un nouveau mot de passe. Tous les utilisateurs peuvent se déconnecter depuis leur menu profil.
+
+## Main Dashboard or Home Page
+
+### Agriculteur
+
+Après connexion, l’agriculteur arrive sur un **tableau de bord simplifié** affichant :
+
+* Un résumé de ses ventes
+* Le nombre de commandes reçues
+* Son score de fiabilité
+* Un bouton “Ajouter un produit”
+
+Un **menu inférieur à 5 onglets** permet de naviguer vers :
+
+* Tableau de bord
+* Mes Produits (liste, ajout, statut)
+* Commandes (livraison, détails)
+* Catalogue (produits d’autres agriculteurs)
+* Profil
+
+⚠️ **Remarque** :
+Pour éviter toute confusion, la **boutique d’intrants** (semences, engrais) est déplacée dans l’onglet “Profil” ou intégrée comme une sous-section du tableau de bord, car elle n’est pas prioritaire dans le MVP et peut créer un conflit d’usage avec le catalogue principal.
+
+### Acheteur
+
+L’acheteur accède à une page “Catalogue” avec :
+
+* Filtres : type de produit, localisation, prix
+* Bouton ajouter au panier
+
+Le menu permet de passer d’un écran à l’autre :
+
+* Catalogue
+* Panier
+* Commandes
+* Profil
+
+### Admin
+
+L’administrateur accède à une interface web avec :
+
+* Un tableau de bord de supervision (ventes globales, produits en attente, utilisateurs)
+* Menu latéral avec :
+
+  * Produits à valider
+  * Utilisateurs
+  * Statistiques
+  * Commandes & signalements
+  * Paramètres plateforme
+
+## Detailed Feature Flows and Page Transitions
+
+### Agriculteur – Publication de produit
+
+1. Depuis l’accueil ou l’onglet “Produits”, il clique sur “Ajouter un produit”
+2. Il entre : nom, type, photo, prix, unité, quantité
+3. Il soumet → le produit passe en statut `pending`
+4. L’admin valide ou rejette
+5. Une fois validé, le produit est visible dans le catalogue global
+
+
+### Agriculteur – Suivi des commandes
+
+1. Il accède à l’onglet “Commandes”
+2. Peut voir : Nouveau / En livraison / Livré
+3. Action possible : “Marquer comme en livraison” > puis “Marquer comme livré”
+4. Lorsqu’une nouvelle commande est reçue, l’agriculteur reçoit une notification SMS contenant les informations principales de la commande, dont le numéro de l’acheteur, pour pouvoir le contacter rapidement (appel direct hors app).
+
+### Agriculteur – Achat dans le catalogue
+
+1. L’agriculteur accède à l’onglet “Catalogue”
+2. Il peut ajouter au panier des produits d’autres agriculteurs
+3. Suit un parcours similaire à l’acheteur classique (panier, commande, paiement)
+
+### Acheteur – Achat d’un produit
+
+1. L’utilisateur parcourt le catalogue
+2. Il sélectionne un produit et clique sur “Ajouter au panier”
+3. Il valide son panier, entre ses coordonnées et paie via Mobile Money (PayDunya)
+4. Il suit l’état de la commande dans l’onglet “Commandes”
+5. Une fois livrée, il peut cliquer sur “Confirmer réception”
+6. Après confirmation de la commande, l’acheteur voit s’afficher le numéro de téléphone de l’agriculteur sur la page de confirmation, pour pouvoir l’appeler directement hors plateforme (livraison, coordination…).
+
+### Boutique intrants
+
+* Affichée uniquement comme section informative pour les agriculteurs
+* Possibilité future d’achat à crédit (non activé dans le MVP)
+
+### Admin – Gestion des contenus
+
+1. L’admin voit la liste des produits à valider
+2. Peut filtrer, approuver ou rejeter un produit
+3. Les statistiques montrent le nombre de produits, ventes, agriculteurs actifs, score moyen
+4. Gestion des signalements ou des refus de commandes
+
+## Settings and Account Management
+
+Tous les utilisateurs accèdent à une section “Profil” pour :
+
+* Mettre à jour numéro, mot de passe, localisation
+* Voir historique des commandes (acheteur) ou ventes (agriculteur)
+* L’administrateur a accès à des paramètres globaux : commission, clés API, politique de confidentialité
+
+## Error States and Alternate Paths
+
+* Si un produit n’est pas validé, il n’est pas visible dans le catalogue.
+* Si une commande échoue (paiement), l’utilisateur reçoit un message clair avec option “Réessayer”.
+* Si l’agriculteur tente de modifier un produit déjà livré, il voit un message de blocage.
+* Lors d’une perte de connexion, les données de formulaire sont sauvegardées temporairement (local)
+* Si une livraison est bloquée, une alerte est envoyée à l’administrateur pour enquête
+
+## Supabase / Backend Rules
+
+* `products.status`: pending / approved / rejected
+* `orders.status`: initiated / accepted / delivering / delivered / received
+* `users.role`: farmer / buyer / admin
+* `users.reliability_score`: auto-calculé en %
+* `notifications`: pour déclencher SMS et push
+
+## Conclusion and Overall App Journey
+
+L’agriculteur commence par s’inscrire, ajoute ses produits, suit ses ventes, livre ses commandes, et peut aussi commander les produits d'autres agriculteurs. Il accède à la boutique d’intrants en tant que service complémentaire.
+
+L’acheteur découvre les produits, passe commande, paie via Mobile Money, et confirme la réception.
+
+L’admin supervise les contenus, valide les produits, et analyse les données via un dashboard dédié. Toutes les interactions sont pensées pour le mobile, avec une navigation fluide, simple et orientée impact terrain.
+
+Chaque utilisateur suit un parcours cohérent, avec des transitions claires, des notifications utiles, et un système sécurisé.
+
+

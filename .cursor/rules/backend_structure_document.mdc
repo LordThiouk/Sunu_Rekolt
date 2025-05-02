@@ -1,0 +1,207 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+
+description: Apply these rules when making changes to the backend project
+globs:
+alwaysApply: true
+-----------------
+
+# Backend Structure Document — Sunu Rekolt
+
+Ce document décrit l’architecture backend du projet **Sunu Rekolt**, en utilisant Supabase comme plateforme principale. Il inclut la structure de la base de données, les endpoints API, la sécurité, l’hébergement, et les mécanismes de monitoring.
+
+## 1. Backend Architecture
+
+### Stack utilisée
+
+* **Supabase** pour : Auth, PostgreSQL, Storage, Edge Functions
+* **Serverless-first** (pas de serveur à gérer)
+* **Event-driven** (triggers pour SMS, score fiabilité, micro-crédit futur)
+* **Layered structure** :
+
+  1. Auth Layer → inscription, rôle, vérification
+  2. Data Layer → PostgreSQL avec RLS
+  3. API Layer → endpoints REST auto-générés
+  4. Intégrations → PayDunya, Twilio, Edge functions custom (livraison, score)
+
+### Performances & Scalabilité
+
+* Mise à l’échelle automatique Supabase (BD & stockage)
+* Fonction Edge pour automatisation (SMS, fiabilité)
+* Support réplication & cache pour reporting
+
+## 2. Gestion de la base de données
+
+* **Technologie** : PostgreSQL
+* **RLS** : activé pour sécurité par rôle (farmer, buyer, admin)
+* **Backups** : journaliers, restauration temporelle
+* **Migration** : SQL versionné avec table de changelog
+
+## 3. Schéma principal (entités clés)
+
+### Tables principales
+
+* `profiles` : tous les utilisateurs (id = auth.uid())
+* `products` : produits agricoles publiés
+* `orders` : commandes clients
+* `order_items` : détails des lignes de commande
+* `payments` : enregistrements de transactions
+* `agricultural_inputs` : articles de la boutique
+* `reliability_scores` : futur score vendeur
+* `notifications` : SMS, email, push logs
+* `refunds` : remboursement en cas de commande annulée
+
+### Extrait SQL simplifié
+
+```sql
+CREATE TABLE profiles (
+  id uuid PRIMARY KEY REFERENCES auth.users ON DELETE CASCADE,
+  phone text UNIQUE NOT NULL,
+  role user_role NOT NULL DEFAULT 'buyer',
+  name text NOT NULL,
+  location text,
+  farm_size decimal,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE products (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  farmer_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  description text NOT NULL,
+  price decimal NOT NULL,
+  quantity decimal NOT NULL,
+  unit text NOT NULL,
+  category product_category NOT NULL,
+  image_url text NOT NULL,
+  is_approved boolean DEFAULT false,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE orders (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  buyer_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  items jsonb NOT NULL,
+  total decimal NOT NULL,
+  status order_status NOT NULL DEFAULT 'pending',
+  payment_method payment_method,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE order_items (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id uuid REFERENCES orders(id) ON DELETE CASCADE,
+  product_id uuid REFERENCES products(id) ON DELETE SET NULL,
+  farmer_id uuid REFERENCES profiles(id) ON DELETE SET NULL,
+  quantity integer NOT NULL,
+  price_at_time decimal NOT NULL,
+  created_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE agricultural_inputs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text NOT NULL,
+  price decimal NOT NULL,
+  category input_category NOT NULL,
+  image_url text NOT NULL,
+  stock integer NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+CREATE TABLE payments (
+  id uuid PRIMARY KEY,
+  order_id uuid REFERENCES orders(id),
+  provider TEXT,
+  amount NUMERIC,
+  status TEXT CHECK (status IN ('initiated','success','failed')),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE refunds (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id uuid REFERENCES orders(id) ON DELETE CASCADE,
+  buyer_id uuid REFERENCES profiles(id),
+  farmer_id uuid REFERENCES profiles(id),
+  amount_requested decimal NOT NULL CHECK (amount_requested > 0),
+  amount_refunded decimal, -- Ce qui a été effectivement remboursé
+  reason text,
+  status text CHECK (status IN ('initiated', 'success', 'failed')),
+  initiated_by text CHECK (initiated_by IN ('buyer', 'admin', 'system')),
+  initiated_at timestamptz DEFAULT now(),
+  processed_at timestamptz,
+  failure_reason text
+);
+
+```
+
+## 4. API Endpoints (REST)
+
+* **/auth/signup**
+* **/auth/login**
+* **/products** (GET / POST / PATCH / DELETE)
+* **/orders** (GET by user, POST new, PATCH status)
+* **/order\_items** (GET for farmers, aggregate stats)
+* **/payments/initiate** (PayDunya)
+* **/notifications/send** (trigger Twilio)
+* **/admin/products/pending** → validation
+* Après chaque commande confirmée, les parties doivent avoir accès au numéro de téléphone correspondant :
+  - L’acheteur peut voir `profiles.phone` de l’agriculteur lié à la commande.
+  - L’agriculteur reçoit le numéro de l’acheteur dans le SMS de confirmation.
+  - Ceci est géré via les `orders` et des policies RLS personnalisées sur `profiles.phone`.
+
+## 5. Hébergement
+
+* Supabase hébergé sur AWS
+* Supabase Storage pour images produit, documents
+* Edge Functions pour :
+
+  * Envoi SMS confirmation
+  * Calcul score fiabilité
+  * Intégration paiement personnalisé
+
+## 6. Sécurité
+
+* Auth : JWT (phone-based), vérification SMS
+* RLS : accès par rôle (lecture/écriture)
+* Chiffrement : TLS (transport), AES-256 (repos)
+* Données personnelles : purgées après 90 jours inactifs
+* L’accès au **numéro de téléphone** est strictement contrôlé :
+  - `profiles.phone` est lisible uniquement si l’utilisateur est lié à la commande (`orders.buyer_id = auth.uid()` ou `farmer_id = auth.uid()`)
+  - RLS garantit la confidentialité hors contexte de commande.
+* L’acheteur peut lire uniquement ses remboursements
+    - L’admin peut tout voir et modifier le statut
+    - La fonction Edge côté plateforme gère le transfert réel PayDunya
+
+## 7. Monitoring & Maintenance
+
+* Logs API + Triggers dans Supabase Studio
+* Intégration Sentry (Edge Errors)
+* Alertes en cas de fail job paiement ou livraison
+* Revue schéma mensuelle, mise à jour RLS
+
+## 8. Fonctions métier personnalisées
+
+* **get\_farmer\_monthly\_sales(farmer\_id, start\_date)** :
+
+  * Renvoie ventes, quantités, revenus par mois
+
+* **get\_farmer\_top\_products(farmer\_id, limit)** :
+
+  * Classement des produits les plus vendus (quantité, chiffre)
+
+* process_refund()
+    * pour gérer les remboursements
+
+## 9. Conclusion
+
+Ce backend permet à Sunu Rekolt de démarrer avec une base solide : sécurisée, évolutive, pilotable avec peu de ressources techniques. Supabase réduit considérablement le temps de mise en marché, tout en gardant la flexibilité pour intégrer des services comme PayDunya, Twilio, ou des modules d’analyse. Il soutient l’ambition de la plateforme d’améliorer l’écosystème agricole au Sénégal.
+

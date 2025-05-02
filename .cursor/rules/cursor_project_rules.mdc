@@ -1,0 +1,151 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+-----------------
+
+## Project Overview
+
+* **Type:** Mobile App MVP (React Native avec Supabase)
+* **Description:** Plateforme mobile pour connecter les agriculteurs et les acheteurs de produits agricoles au Sénégal.
+* **Primary Goal:** Permettre la mise en vente, l’achat, le paiement, la notification, et le suivi de commandes agricoles avec un backend Supabase.
+
+## Project Structure (mise à jour selon la structure réelle)
+
+### Répertoires principaux
+
+* **app/** : Structure par routes avec navigation par dossier
+
+  * `(auth)/` : Login et Register
+  * `(tabs)/` : Layout principal après connexion (accueil, panier, paiement, catalogue, profil…)
+  * `+not-found.tsx` : Page 404
+  * `_layout.tsx` : Navigation globale
+  * `index.tsx` : Accueil ou splash
+
+* **components/** : Composants UI réutilisables
+
+  * Button.tsx, TextInput.tsx, ProductCard.tsx, CartItem.tsx
+
+* **constants/** : Couleurs globales
+
+  * Colors.ts
+
+* **context/** : Contextes React
+
+  * AuthContext.tsx (auth utilisateur), CartContext.tsx (gestion panier)
+
+* **hooks/** : Hooks personnalisés
+
+  * useFrameworkReady.ts
+
+* **lib/** : Utilitaires globaux
+
+  * supabase.ts : client Supabase (à déplacer dans `lib/supabase/client.ts` pour clarté)
+
+* **supabase/migrations/** : Migrations SQL gérées par Supabase CLI
+
+* **types/** : Types globaux TS
+
+* **assets/images/** : Icônes et images
+
+### Suggestions Cursor-friendly
+
+* Créer `lib/services/` pour :
+
+  * notifications.ts (Twilio)
+  * payment.ts (PayDunya)
+  * scoring.ts (score de fiabilité)
+
+* Créer `lib/api/` pour :
+
+  * products.ts, orders.ts, intrants.ts…
+
+* Structurer les écrans métier dans `app/(tabs)/` par logique d’usage :
+
+  * `product/add.tsx`, `catalog/[id].tsx`, `order-confirmation.tsx`, etc.
+
+## Tech Stack Rules
+
+* React Native (Expo SDK 50)
+* Supabase (auth, storage, RLS, edge functions)
+* TypeScript + ESLint + Prettier
+* Zod pour validation
+* Twilio pour SMS
+* PayDunya pour paiement mobile
+
+## PRD Compliance
+
+* Après chaque commande, les deux parties doivent avoir accès au **numéro de téléphone de l’autre** pour faciliter le contact direct hors plateforme (par appel). Le numéro de l’agriculteur est visible dans la confirmation pour l’acheteur, et inversement dans le SMS de notification pour l’agriculteur.
+
+* Produits visibles uniquement si `is_approved = true`
+
+* SMS envoyé à l’agriculteur via Supabase function (Twilio)
+
+* Boutique visible mais non achetable (lecture seule sur table `agricultural_inputs`)
+
+## App Flow Mapping
+
+* Lorsqu'une commande est confirmée :
+
+  * L’acheteur voit le **numéro de téléphone de l’agriculteur** sur la page de confirmation pour pouvoir le contacter directement par appel hors plateforme.
+  * L’agriculteur reçoit un SMS avec les détails de la commande, y compris le **numéro de l’acheteur**, pour pouvoir organiser la livraison ou poser des questions.
+  * L’appel se fait en dehors de la plateforme : il n’y a pas de module VoIP ou appel intégré dans l’app.
+
+* Auth : `app/(auth)/login.tsx`, `register.tsx` via Supabase Auth
+
+* Catalogue & fiche : `app/(tabs)/catalog/[id].tsx`, `components/ProductCard.tsx`
+
+* Ajouter produit : `app/(tabs)/product/add.tsx`
+
+* Paiement : `app/(tabs)/payment.tsx` → via `lib/services/payment.ts`
+
+* Confirmation : `order-confirmation.tsx`
+
+* Panier : `cart.tsx` + `CartContext.tsx`
+
+* Profil : `profile.tsx`
+
+## Best Practices
+
+* State : Context API ou Zustand (cart + auth OK)
+* Navigation : Layout basé sur `app/(tabs)/_layout.tsx` + routing folder-based
+* Sécurité : Supabase avec RLS actif sur toutes les tables
+* Migration : stockées dans `supabase/migrations/`
+* Services critiques : isolés dans `lib/services/`
+* Data access : dans `lib/api/*.ts`
+
+## Rules Supabase
+
+* L’accès au **numéro de téléphone** est contrôlé via des policies RLS :
+
+  * `profiles.phone` est accessible au vendeur **uniquement** si `orders.buyer_id = auth.uid()`
+  * et accessible à l’acheteur si `products.farmer_id = auth.uid()` via la commande liée.
+  * Ces règles permettent de révéler les numéros seulement après qu’une commande ait été confirmée.
+
+* RLS obligatoire sur toutes les entités (produits, commandes, intrants)
+
+* Enum utilisées pour statuts (`order_status`, `product_category`, etc.)
+
+* Fonctions SQL sécurisées pour statistiques (sales, top produits…)
+
+* Triggers pour mise à jour de `updated_at`
+
+## Rules Metrics
+
+Créer un fichier `cursor_metrics.md` à la racine :
+
+```markdown
+# Rules Metrics
+## Usage
+
+* cursor-project-rules-sunurekolt.mdc: 1
+```
+
+À mettre à jour à chaque ajout ou usage de règle Cursor liée à l’organisation, aux services ou à la sécurité du projet.
+

@@ -1,0 +1,78 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+-----------------
+
+# Implementation Plan — Sunu Rekolt
+
+## Phase 1: Initial Setup & Project Context
+
+1. **Environment Check**: Le projet a déjà été initialisé en Expo/React Native avec structure dossier `app/`, `components/`, `context/`, etc.
+2. **Action**: Vérifier que Supabase est bien connecté via `lib/supabase.ts` avec clé publique et URL.
+3. **Validation**: Test de la récupération des `products` approuvés depuis Supabase (`is_approved = true`).
+4. **Action**: Vérifier structure `supabase/migrations/` → au moins 3 migrations présentes.
+5. **Action**: Créer le fichier `cursor_metrics.md` dans `.cursor/` pour suivi des règles.
+
+## Phase 2: Développement Frontend
+
+6. **Action**: Vérifier fonctionnement navigation avec Expo Router (`_layout.tsx`, `(auth)/login.tsx`, `(tabs)/index.tsx`).
+7. **Action**: Intégrer composant `ProductCard.tsx` dans `catalog/[id].tsx` avec affichage vendeur + bouton commande.
+8. **Action**: Ajouter affichage **numéro de téléphone** de l’agriculteur après paiement dans `order-confirmation.tsx`.
+9. **Action**: Dans `profile.tsx`, afficher commandes passées et bouton "Confirmer réception".
+10. **Action**: Ajouter dashboard simplifié pour agriculteur : commandes reçues, score fiabilité, produits ajoutés.
+11. **Validation**: Simuler commande depuis l’acheteur et afficher données correctes dans onglet `Commandes` côté vendeur.
+
+## Phase 3: Backend Supabase (Déjà amorcé)
+
+12. **Validation**: Tables déjà créées : `profiles`, `products`, `orders`, `order_items`, `agricultural_inputs`
+13. **Action**: Ajouter champ `payment_transaction_id` dans `orders` pour futur refund avec PayDunya.
+14. **Action**: Créer `Edge Function` : `process_refund()` pour traiter les remboursements via API PayDunya.
+15. **Action**: Ajouter RLS pour sécuriser accès aux téléphones après `orders.status = 'paid'` ou `received`.
+
+## Phase 4: Livraison et Paiement
+
+16. **Action**: Dans `orders`, utiliser status `initiated`, `paid`, `delivering`, `delivered`, `received`, `refunded`
+17. **Action**: Ajouter bouton "Marquer comme livré" (farmer) et "Confirmer réception" (buyer)
+18. **Action**: Déclencher **paiement vers vendeur** uniquement si `status = received`
+19. **Action**: Prévoir fallback automatique après 48h si aucune confirmation (cron / edge function à planifier)
+
+## Phase 5: Boutique + Intrants
+
+20. **Action**: Affichage catalogue intrants dans `shop.tsx`, lecture seule depuis `agricultural_inputs`
+21. **Future**: Activer achat avec crédit une fois micro-crédit en place
+
+## Phase 6: Notifications
+
+22. **Action**: SMS via Twilio à l’agriculteur après commande (via Edge Function ou Zapier/Supabase trigger)
+23. **Action**: Push notifications via `expo-notifications` pour commandes à livrer, réception confirmée
+
+## Phase 7: Administration
+
+24. **Action**: Créer panneau admin web (hors app Expo) pour :
+
+* Valider produits
+* Voir stats (ventes, utilisateurs, top produits)
+* Gérer remboursements manuels
+
+## Phase 8: Tests & Stabilisation
+
+25. **Validation**: Tests manuels dans Expo Go (mobile)
+26. **Action**: Tester flux complet : ajout produit → commande → livraison → confirmation → payout
+27. **Action**: Simuler remboursement et vérifier logs + appels API PayDunya
+28. **Action**: Vérifier RLS : téléphone visible uniquement après commande
+
+## Phase 9: Lancement Public MVP
+
+29. **Action**: Générer APK + déployer sur Google Play en accès restreint
+30. **Action**: Préparer landing page pour rediriger vers app (avec lien formulaire, contact, CGU, etc.)
+31. **Action**: Planifier communication réseau social pour lancement
+
+> Ce plan d’implémentation sera mis à jour à chaque nouveau sprint ou module activé (micro-crédit, épargne, coopérative…).
+

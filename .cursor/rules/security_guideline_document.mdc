@@ -1,0 +1,130 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+
+description: Apply these rules when making changes to the project
+globs:
+alwaysApply: true
+-----------------
+
+# Security Guidelines and Implementation Plan — Sunu Rekolt
+
+## 1. Introduction
+
+Ce document décrit les principes de sécurité et le plan d’implémentation pour l’application Sunu Rekolt. L’objectif est de garantir un environnement sécurisé, conforme à la réglementation (RGPD‑inspiré), pour la gestion des données agricoles et financières au Sénégal.
+
+---
+
+## 2. Principes de Sécurité (Security by Design)
+
+1. **Sécurité par conception** : intégrée dès la phase de conception.
+2. **Moindre privilège** : accès restreint aux besoins selon le rôle (`farmer`, `buyer`, `admin`).
+3. **Défense en profondeur** : validation backend, RLS, tokens, audit.
+4. **Validation côté serveur** : toute donnée utilisateur est revalidée côté Supabase.
+5. **Fail-safe** : erreurs explicites mais sans révélation d’info sensible.
+6. **Defaults sûrs** : désactivation de toute fonction non explicitement utilisée.
+
+---
+
+## 3. Authentification & Accès
+
+### 3.1. Supabase Auth
+
+* Auth via numéro de téléphone + mot de passe (Twilio + OTP).
+* JWT Supabase avec expiration 7j et renouvellement sécurisé.
+* MFA envisagé pour rôle `admin` phase 2.
+
+### 3.2. Gestion des rôles (RBAC)
+
+* Rôles : `farmer`, `buyer`, `admin` définis en enum.
+* RLS active sur toutes les tables. Exemples :
+
+  * `products`: lecture publique si `is_approved = true`, sinon restreint à l’auteur.
+  * `orders`: visibles uniquement par `buyer_id` ou le `farmer` associé via `order_items`.
+  * `profiles.phone`: accessible uniquement après commande confirmée entre parties.
+
+### 3.3. Sessions
+
+* Timeout inactif : 30min ; expiration absolue : 24h (mobile-first).
+
+---
+
+## 4. Sécurité des Données et API
+
+* HTTPS (TLS 1.2+) partout ; enforced côté Supabase.
+* Aucune clé PayDunya ou Twilio dans frontend.
+* Sanitation entrées via Zod côté frontend + validations SQL côté Supabase (e.g., enum, CHECK).
+* URL Storage signées avec expiration courte pour images produits.
+* Aucun accès direct non authentifié à Supabase Storage.
+
+---
+
+## 5. Chiffrement & Retention
+
+* En transit : TLS systématique
+* Au repos : AES-256 par Supabase / SQLite local encrypté
+* Suppression automatique des profils inactifs >90j
+* Données sensibles (noms, téléphones, localisation) visibles uniquement après commande ou pour `admin`
+* Consentement explicite requis avant collecte de données (CNI future phase)
+
+---
+
+## 6. Paiements et Remboursements
+
+* Paiements via PayDunya → déclenché via Supabase Edge Function (non exposé frontend)
+* Refunds : enregistrés dans `refunds` avec statuts (`pending`, `processed`, `denied`) + champ `reason`
+* Supabase vérifie identité de l’auteur du remboursement + rôles
+* Frais doublement imputés par PayDunya (2%) → couverture via commission plateforme (10%)
+
+---
+
+## 7. Notifications & Logs
+
+* SMS via Twilio → appelé depuis une Edge Function protégée
+* `notifications` : logs complets (type, payload, date, user\_id)
+* Audit trail pour tous changements critiques (`updated_at`, triggers)
+* Logs backend visibles dans Supabase Studio, frontend → futur Sentry
+
+---
+
+## 8. Sécurité Mobile / Offline
+
+* Pas de numéro affiché si pas de commande entre les deux parties (RLS enforced)
+* Jetons locaux expirables pour usage offline (livraison, futur scan QR)
+* Sécurité contextuelle (affichage conditionnel dans l’app)
+* Données sensibles cachées si non nécessaires dans l’écran (frontend masking)
+
+---
+
+## 9. CI/CD Sécurisé
+
+* GitHub Actions : build, tests, lint, SAST (optionnel : semgrep)
+* Secrets via GitHub Secrets (PayDunya, Twilio)
+* Lint + test obligatoires avant merge
+
+---
+
+## 10. Plan de Sécurité — MVP
+
+| Semaine | Objectif                           | Détails                                              |
+| ------- | ---------------------------------- | ---------------------------------------------------- |
+| S1      | Setup Auth & RLS                   | Enum rôles, politiques produits/commandes/numéros    |
+| S2      | Notifications & Téléphone sécurisé | Edge SMS + téléphone RLS                             |
+| S3      | Paiement + refund sécurisé         | Edge Function refund() + policies                    |
+| S4      | Logs & Audit Trail                 | Table notifications, refunds, updated\_at + triggers |
+
+---
+
+## 11. Suivi & Révision
+
+* Documentation mis à jour à chaque ajout de table / endpoint / rôle
+* Audit RLS mensuel ou après ajout de nouvelle fonctionnalité
+* Mise à jour planifiée des clés secrètes tous les 6 mois
+
+---
+
+Ce plan garantit que Sunu Rekolt respecte les bonnes pratiques de sécurité pour la gestion de données sensibles, de paiements digitaux et de confiance entre acteurs agricoles.
+

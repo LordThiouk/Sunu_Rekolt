@@ -1,0 +1,107 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Frontend Guidelines Document — Sunu Rekolt
+
+## 1. Frontend Architecture
+
+**Overview**
+L’application Sunu Rekolt est construite en **React Native avec Expo**, avec une structure modulaire orientée mobile-first. Elle cible les utilisateurs agriculteurs, acheteurs et administrateurs.
+
+* **React Native** : Codebase unique pour Android et iOS.
+* **Expo Router** : Routage simplifié basé sur la structure de fichiers (`app/`).
+* **Supabase** : Authentification, base de données (PostgreSQL), API REST auto-générées.
+* **Local Storage** : Context API + possibilité d’ajouter AsyncStorage pour cache ou données hors-ligne.
+
+**Packages clés**
+
+* `react-native-svg`, `expo-image`, `react-native-paper`, `zod`, `react-hook-form`
+* `@supabase/supabase-js` pour les interactions backend
+* `react-native-phone-number-input` pour la saisie numéro sécurisée
+
+**Structure** (actuelle)
+
+* `app/` : Toutes les pages principales — séparées par `(auth)`, `(tabs)`
+* `components/` : Boutons, cartes produits, champs de saisie
+* `context/` : Auth & Panier (React Context)
+* `lib/supabase.ts` : Client Supabase
+* `hooks/` : Hooks personnalisés (`useFrameworkReady`, etc.)
+* `types/` : Types globaux TypeScript
+
+## 2. Design Principles
+
+1. **Accessibilité mobile** : boutons larges, navigation tactile simple, peu de champs à remplir
+2. **Expérience directe** : utilisateur voit ses infos clés dès l’accueil (commandes, score…)
+3. **Simplicité visuelle** : flat design, peu de surcharge visuelle
+4. **Compatibilité hors ligne** (à venir) : commandes stockées temporairement
+5. **Uniformité** : réutilisation des composants UI entre pages acheteur/agriculteur
+
+## 3. Styling et Théming
+
+* Thème défini dans `constants/Colors.ts`
+* Composants stylés via `StyleSheet.create` ou `styled-components`
+* Typographie cohérente avec poids, taille et espacement contrôlés
+
+Palette suggérée (modifiable) :
+
+* Vert Sunu : #3D944B
+* Jaune clair : #FFD65A
+* Fond clair : #F6F6F6
+* Texte primaire : #212121
+
+## 4. Component Structure
+
+* Tous les composants sont placés dans `components/`
+
+  * `ProductCard.tsx`, `CartItem.tsx`, `TextInput.tsx`, `Button.tsx`
+* Reutilisables sur toutes les pages avec props contrôlés via TypeScript
+* Gérer les `loading` states et erreurs dans chaque composant UI
+
+## 5. State Management
+
+* Utilisation de **Context API** pour :
+
+  * Auth (`AuthContext.tsx`)
+  * Panier (`CartContext.tsx`)
+* À moyen terme : migrer vers **Zustand** ou **Jotai** si complexité augmente
+* Stockage temporaire possible via `AsyncStorage` pour commande hors ligne (future feature)
+
+## 6. Navigation
+
+* **Expo Router** avec structure `app/`
+
+  * `(auth)/login.tsx`, `(tabs)/catalog/[id].tsx`, etc.
+* Utilisation de `+not-found.tsx` pour erreurs 404
+* `app/_layout.tsx` définit la structure de navigation principale (tabs)
+
+## 7. Performances et Optimisations
+
+1. **Lazy loading** des écrans lourds (boutique, paiement)
+2. **Memoization** des composants (`React.memo`, `useMemo`)
+3. **Images compressées** (WebP ou via CDN Supabase)
+4. **Limiter les re-renders** en plaçant les hooks au bon niveau
+5. **Utiliser FlatList** pour les listes produits
+
+## 8. Tests et Assurance Qualité
+
+* Tests unitaires via `jest` et `react-testing-library`
+* Vérifications visuelles sur simulateur Android/iOS
+* Flows critiques à tester :
+
+  * Création produit
+  * Achat et validation commande
+  * Authentification + inscription SMS
+
+## 9. Standards UI spécifiques Sunu Rekolt
+
+* Numéro téléphone affiché après confirmation commande (acheteur/agriculteur)
+* Score fiabilité mis en avant pour chaque vendeur
+* Onglets limités à 4–5 max pour simplifier UX mobile
+* Confirmation réception = déclenchement payout
+
+## 10. Conclusion
+
+Ces guidelines assurent une base frontend saine, cohérente, maintenable et orientée mobile. Le choix React Native + Supabase est parfaitement aligné avec les contraintes de temps, budget et scalabilité locale. À mesure que le projet grandit, cette base permettra d’intégrer des modules comme micro-crédit, chatbot, ou coopératives sans restructurer le code existant.
+
