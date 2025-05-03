@@ -19,6 +19,7 @@ import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
 import { MapPin, Info } from 'lucide-react-native';
+import { CartItem } from '@/types'; // Import CartItem type if not already
 
 export default function PaymentScreen() {
   const [selectedMethod, setSelectedMethod] = useState('orange_money');
@@ -50,39 +51,85 @@ export default function PaymentScreen() {
       Alert.alert('Erreur', 'Vous devez être connecté pour effectuer un paiement');
       return;
     }
+    if (items.length === 0) {
+       Alert.alert('Erreur', 'Votre panier est vide.');
+       return;
+    }
 
+    setProcessingPayment(true);
     try {
-      setProcessingPayment(true);
-      
-      // Simulate PayDunya integration (replace later)
-      
-      // Create order in database, now including address
+      // --- Step 1: Create order in 'orders' table --- 
+      console.log('[PaymentScreen] Creating order...');
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           buyer_id: user.id,
-          items: items, // Make sure CartItem structure matches DB expectations if using jsonb directly
           total: total + 1000, // Including delivery fee
           status: 'paid', // Simulating successful payment
           payment_method: selectedMethod,
-          delivery_address: deliveryAddress, // Add address
-          delivery_details: deliveryDetails, // Add details
+          delivery_address: deliveryAddress,
+          delivery_details: deliveryDetails,
         })
         .select()
         .single();
+
+      if (orderError) {
+         console.error('[PaymentScreen] Error creating order:', orderError);
+         throw orderError;
+      }
       
-      if (orderError) throw orderError;
+      if (!order) {
+        throw new Error('Failed to create order or retrieve order ID.');
+      }
       
-      // ... simulate processing, clear cart, navigate ...
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log(`[PaymentScreen] Order created successfully. Order ID: ${order.id}`);
+
+      // --- Step 2: Prepare and insert data into 'order_items' table --- 
+      console.log('[PaymentScreen] Preparing order items...');
+      const orderItemsData = items.map((cartItem: CartItem) => {
+         // Ensure cartItem has necessary fields
+         if (!cartItem.productId || !cartItem.farmerId || typeof cartItem.price !== 'number') {
+            console.error('[PaymentScreen] Invalid cart item data:', cartItem);
+            // Throw an error to stop the process if data is invalid
+            throw new Error(`Données produit invalides dans le panier pour ${cartItem.name || 'un produit'}. ProductId, FarmerId ou Price manquant.`);
+         }
+         return {
+            order_id: order.id,
+            product_id: cartItem.productId,
+            farmer_id: cartItem.farmerId,
+            quantity: cartItem.quantity,
+            price_at_time: cartItem.price,
+         };
+      });
+      
+      console.log(`[PaymentScreen] Inserting ${orderItemsData.length} order items...`);
+      const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(orderItemsData);
+
+      if (itemsError) {
+        console.error('[PaymentScreen] Error inserting order items:', itemsError);
+        // Optional: Attempt to delete the order created in Step 1 for consistency?
+        // await supabase.from('orders').delete().eq('id', order.id);
+        throw itemsError;
+      }
+      
+      console.log('[PaymentScreen] Order items inserted successfully.');
+
+      // --- Step 3: Simulate processing, clear cart, navigate --- 
+      console.log('[PaymentScreen] Simulating post-payment processing...');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Shortened delay
       clearCart();
+      console.log('[PaymentScreen] Navigating to order confirmation...');
       router.push({
         pathname: '/(tabs)/order-confirmation',
         params: { orderId: order.id }
       });
+
     } catch (error) {
-      console.error('Payment error:', error);
-      Alert.alert('Erreur de paiement', 'Une erreur est survenue lors du traitement du paiement. Veuillez réessayer.');
+      console.error('[PaymentScreen] Payment processing failed:', error);
+      const message = error instanceof Error ? error.message : 'Une erreur inconnue est survenue.';
+      Alert.alert('Erreur de paiement', ` ${message} Veuillez réessayer.`);
     } finally {
       setProcessingPayment(false);
     }
@@ -127,7 +174,6 @@ export default function PaymentScreen() {
             onChangeText={setDeliveryAddress}
             placeholder="Quartier, rue, numéro de maison..."
             icon={<MapPin size={20} color={Colors.neutral[600]} />}
-            required
           />
           <TextInput
             label="Détails supplémentaires (optionnel)"
@@ -137,7 +183,7 @@ export default function PaymentScreen() {
             icon={<Info size={20} color={Colors.neutral[600]} />}
             multiline
             numberOfLines={3}
-            style={{ height: 80, textAlignVertical: 'top' }}
+            style={{ height: 80 }}
           />
         </View>
 
@@ -173,7 +219,6 @@ export default function PaymentScreen() {
             onChangeText={setPhoneNumber}
             placeholder="Numéro pour la confirmation du paiement"
             keyboardType="phone-pad"
-            required
           />
           
           <Text style={styles.infoText}>

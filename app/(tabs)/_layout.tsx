@@ -109,6 +109,14 @@ export default function TabLayout() {
           title: 'Confirmation de commande',
         }}
       />
+      {/* Explicitly hide farmer detail screen/directory */}
+      <Tabs.Screen
+        name="farmer-order-detail/[id]" // Target the dynamic file route
+        options={{
+          href: null, // Hide from tab bar
+          headerShown: false, // Keep header management within the screen itself
+        }}
+      />
     </Tabs>
   );
 }

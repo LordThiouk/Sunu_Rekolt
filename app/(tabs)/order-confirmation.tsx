@@ -12,21 +12,41 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CircleCheck as CheckCircle2, PhoneCall, MapPin, Info } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
-import { Order, User } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { Order, User, OrderItemWithProduct } from '@/types';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
 
-type OrderWithAddress = Order & {
+// Define a type specific to this screen's order state
+type OrderForConfirmation = Order & {
+  // No longer need buyerId here as it's in the base Order type
+  // Keep delivery fields if needed
   delivery_address?: string | null;
   delivery_details?: string | null;
+  // Ensure items uses the correct detailed type
+  items: OrderItemWithProduct[]; 
+};
+
+const getStatusText = (status: Order['status']) => {
+  switch (status) {
+    case 'paid': return 'Payé';
+    case 'delivering': return 'En livraison';
+    case 'delivered': return 'Livré';
+    case 'received': return 'Reçu';
+    case 'cancelled': return 'Annulé';
+    default: return 'En attente';
+  }
 };
 
 export default function OrderConfirmationScreen() {
   const { orderId } = useLocalSearchParams();
-  const [order, setOrder] = useState<OrderWithAddress | null>(null);
+  // Use the more specific type for the state
+  const [order, setOrder] = useState<OrderForConfirmation | null>(null);
   const [farmerPhone, setFarmerPhone] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (orderId) {
@@ -37,20 +57,47 @@ export default function OrderConfirmationScreen() {
   const fetchOrderAndFarmer = async (id: string) => {
     try {
       setLoading(true);
+      // Step 1: Fetch basic order data (allowed by buyer RLS)
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select('*, items')
+        .select('id, buyer_id, total, status, payment_method, created_at, delivery_address, delivery_details') 
         .eq('id', id)
         .single();
 
       if (orderError) throw orderError;
       if (!orderData) throw new Error('Order data not found');
+      
+      // Step 2: Fetch associated order items using the RPC function
+      console.log(`[OrderConfirmation] Fetching items via RPC for order ID: ${orderData.id}`);
+      const { data: itemsData, error: itemsError } = await supabase
+        .rpc('get_order_items_for_buyer', { p_order_id: orderData.id });
 
-      setOrder(orderData as OrderWithAddress);
+      if (itemsError) {
+         console.error('[OrderConfirmation] Error fetching order items via RPC:', itemsError);
+         throw itemsError; 
+      }
+      
+      console.log(`[OrderConfirmation] Found ${itemsData?.length || 0} items for order via RPC.`);
+      
+      // Step 3: Combine order data and items data 
+      const fullOrderData: OrderForConfirmation = {
+        ...orderData,
+        buyerId: orderData.buyer_id,
+        paymentMethod: orderData.payment_method,
+        createdAt: orderData.created_at,
+        // RPC returns items with product_name and item_id
+        items: (itemsData || []).map((item: any) => ({ 
+          ...item, 
+          id: item.item_id // Map item_id back to id for consistency if needed by types/rendering
+        })), 
+      };
+      
+      const farmerId = fullOrderData.items?.[0]?.farmer_id;
+      setOrder(fullOrderData);
 
-      const farmerId = orderData.items?.[0]?.farmerId;
-
+      // Step 4: Fetch farmer phone
       if (farmerId) {
+        console.log('[OrderConfirmation] Attempting to fetch profile for farmer ID:', farmerId);
         const { data: farmerData, error: farmerError } = await supabase
           .from('profiles')
           .select('phone')
@@ -58,10 +105,22 @@ export default function OrderConfirmationScreen() {
           .single();
 
         if (farmerError) {
-          console.warn('Could not fetch farmer phone:', farmerError.message);
+          // Add more specific logging for the PGRST116 error
+          console.error('Error fetching farmer profile:', farmerError);
+          if (farmerError.code === 'PGRST116') {
+            console.error(`--> No profile found in public.profiles for farmer ID: ${farmerId}`);
+            Alert.alert('Erreur Vendeur', 'Profil du vendeur introuvable. Impossible d\'afficher le numéro.');
+          } else {
+             Alert.alert('Erreur', 'Impossible de charger les informations du vendeur.');
+          }
+          // Set phone to null or handle gracefully instead of just warning
+          setFarmerPhone(null); 
         } else if (farmerData) {
+          console.log('[OrderConfirmation] Farmer phone fetched successfully:', farmerData.phone);
           setFarmerPhone(farmerData.phone);
         }
+      } else {
+        console.warn('[OrderConfirmation] Could not extract farmerId from order items.');
       }
     } catch (error) {
       console.error('Error fetching order details:', error);
@@ -93,11 +152,36 @@ export default function OrderConfirmationScreen() {
   };
 
   const handleContinueShopping = () => {
-    router.push('/(tabs)/');
+    router.push('/');
   };
 
   const handleViewProfile = () => {
     router.push('/(tabs)/profile');
+  };
+
+  const handleConfirmReception = async () => {
+    if (!order || !user || user.id !== order.buyerId) return;
+
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'received' })
+        .eq('id', order.id);
+
+      if (error) throw error;
+
+      setOrder((prevOrder) => prevOrder ? { ...prevOrder, status: 'received' } : null);
+
+      Alert.alert("Succès", "Commande marquée comme reçue. Le paiement au vendeur sera initié.");
+
+    } catch (error) {
+       const message = error instanceof Error ? error.message : 'Une erreur inconnue est survenue.';
+       console.error('Error confirming order reception:', error);
+       Alert.alert("Erreur", `Impossible de confirmer la réception: ${message}`);
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   if (loading) {
@@ -119,6 +203,14 @@ export default function OrderConfirmationScreen() {
       </View>
     );
   }
+
+  // Add console logs here for debugging
+  console.log('[OrderConfirmation] Debug Button Render:');
+  console.log('  - User ID:', user?.id);
+  console.log('  - Order Buyer ID:', order?.buyerId);
+  console.log('  - Order Status:', order?.status);
+  console.log('  - Condition Met (user?.id === order.buyerId):', user?.id === order?.buyerId);
+  console.log("  - Condition Met (order.status === 'delivered'):", order?.status === 'delivered');
 
   return (
     <View style={styles.container}>
@@ -159,13 +251,13 @@ export default function OrderConfirmationScreen() {
           <Text style={styles.sectionTitle}>Récapitulatif de la commande</Text>
 
           <View style={styles.orderItems}>
-            {order.items.map((item) => (
-              <View key={item.id} style={styles.orderItem}>
-                <Text style={styles.itemName}>{item.name}</Text>
+            {order.items.map((item: any) => (
+              <View key={item.item_id} style={styles.orderItem}>
+                <Text style={styles.itemName}>{item.product_name || 'Produit inconnu'}</Text>
                 <View style={styles.itemDetails}>
                   <Text style={styles.itemQuantity}>{item.quantity}x</Text>
                   <Text style={styles.itemPrice}>
-                    {(item.price * item.quantity).toLocaleString()} CFA
+                    {(item.price_at_time * item.quantity).toLocaleString()} CFA
                   </Text>
                 </View>
               </View>
@@ -206,9 +298,12 @@ export default function OrderConfirmationScreen() {
                 style={[
                   styles.statusBadge,
                   order.status === 'paid' && styles.statusPaid,
+                  order.status === 'delivering' && styles.statusDelivering,
+                  order.status === 'delivered' && styles.statusDelivered,
+                  order.status === 'received' && styles.statusReceived,
                 ]}
               >
-                {order.status === 'paid' ? 'Payé' : order.status}
+                {getStatusText(order.status)}
               </Text>
             </View>
             <View style={styles.detailRow}>
@@ -234,6 +329,17 @@ export default function OrderConfirmationScreen() {
         </View>
 
         <View style={styles.actions}>
+          {/* Conditionally render the Confirm Reception button */}
+          {user?.id === order.buyerId && order.status === 'delivered' && (
+            <Button
+              title="Confirmer réception"
+              onPress={handleConfirmReception}
+              loading={isUpdating}
+              disabled={isUpdating}
+              style={styles.button}
+              variant="primary"
+            />
+          )}
           <Button
             title="Continuer mes achats"
             onPress={handleContinueShopping}
@@ -406,8 +512,20 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   statusPaid: {
-    backgroundColor: Colors.success[100],
-    color: Colors.success[700],
+    backgroundColor: Colors.success.light,
+    color: Colors.success.DEFAULT,
+  },
+  statusDelivering: {
+    backgroundColor: Colors.warning.light,
+    color: Colors.warning.dark,
+  },
+  statusDelivered: {
+    backgroundColor: Colors.primary[100],
+    color: Colors.primary.DEFAULT,
+  },
+  statusReceived: {
+    backgroundColor: Colors.success.DEFAULT,
+    color: Colors.neutral.white,
   },
   infoText: {
     fontSize: 16,

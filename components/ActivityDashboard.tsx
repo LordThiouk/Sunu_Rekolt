@@ -3,16 +3,22 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-nat
 import { supabase } from '@/lib/supabase';
 import Colors from '@/constants/Colors';
 import { Package, ShoppingBag, TrendingUp, Award } from 'lucide-react-native';
-import { CartItem } from '@/types';
+
+interface MonthlyOrderStat {
+  month: string; // Format might differ from RPC, adjust if needed
+  count: number;
+}
+
+interface TopProductStat {
+  name: string;
+  totalSold: number;
+}
 
 interface ActivityStats {
-  totalOrders: number;
+  totalOrders: number; // We can derive this from monthly stats
   totalProducts: number;
-  monthlyOrders: { month: string; count: number }[];
-  topProduct: {
-    name: string;
-    totalSold: number;
-  } | null;
+  monthlyOrders: MonthlyOrderStat[];
+  topProduct: TopProductStat | null;
 }
 
 export default function ActivityDashboard({ farmerId }: { farmerId: string }) {
@@ -31,88 +37,70 @@ export default function ActivityDashboard({ farmerId }: { farmerId: string }) {
   const fetchStats = async () => {
     try {
       setLoading(true);
+      console.log(`[ActivityDashboard] Fetching stats for farmer: ${farmerId}`);
 
-      // Fetch total products
+      // --- 1. Fetch total products (Correct) ---
+      console.log(`[ActivityDashboard] Fetching total products...`);
       const { count: totalProducts, error: productsError } = await supabase
         .from('products')
         .select('id', { count: 'exact', head: true })
         .eq('farmer_id', farmerId);
 
       if (productsError) throw productsError;
+      console.log(`[ActivityDashboard] Total products found: ${totalProducts}`);
 
-      // Fetch orders related to the farmer using a join
-      const { data: orders, error: ordersError } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          created_at,
-          items,
-          order_items!inner(farmer_id)
-        `)
-        .eq('status', 'paid')
-        .eq('order_items.farmer_id', farmerId);
+      // --- 2. Fetch monthly sales using RPC --- 
+      console.log(`[ActivityDashboard] Fetching monthly sales via RPC...`);
+      const { data: monthlySalesData, error: monthlySalesError } = await supabase
+        .rpc('get_farmer_monthly_sales', {
+           farmer_id: farmerId,
+           start_date: new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString() // Approx 6 months ago
+        });
+        
+      if (monthlySalesError) {
+         console.error("[ActivityDashboard] Error fetching monthly sales:", monthlySalesError);
+         throw monthlySalesError;
+      }
+      console.log("[ActivityDashboard] Monthly sales data:", monthlySalesData);
+      
+      const formattedMonthlyOrders: MonthlyOrderStat[] = (monthlySalesData || []).map((row: any) => ({
+          month: new Date(row.month).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' }),
+          count: Number(row.total_orders) || 0 // Ensure count is a number
+      })).sort((a: any, b: any) => new Date(a.month).getTime() - new Date(b.month).getTime()); // Sort chronologically if needed by chart
+      
+      const totalOrdersFromStats = formattedMonthlyOrders.reduce((sum, month) => sum + month.count, 0);
 
-      if (ordersError) {
-          console.error("Order fetch error details:", ordersError);
-          throw ordersError;
+      // --- 3. Fetch top product using RPC ---
+      console.log(`[ActivityDashboard] Fetching top product via RPC...`);
+      const { data: topProductData, error: topProductError } = await supabase
+        .rpc('get_farmer_top_products', {
+            farmer_id: farmerId,
+            limit_count: 1
+        });
+
+      if (topProductError) {
+          console.error("[ActivityDashboard] Error fetching top product:", topProductError);
+          throw topProductError;
+      }
+      console.log("[ActivityDashboard] Top product data:", topProductData);
+      
+      let topProductResult: TopProductStat | null = null;
+      if (topProductData && topProductData.length > 0) {
+          const top = topProductData[0];
+          topProductResult = {
+             name: top.product_name,
+             totalSold: Number(top.total_quantity) || 0 // Ensure quantity is a number
+          };
       }
 
-      // Process orders to get monthly stats and top product
-      const monthlyStats = new Map<string, number>();
-      const productSales = new Map<string, { name: string, quantity: number }>();
-
-      orders?.forEach(order => {
-        // Monthly stats
-        const month = new Date(order.created_at).toLocaleDateString('fr-FR', {
-          year: 'numeric',
-          month: 'long'
-        });
-        monthlyStats.set(month, (monthlyStats.get(month) || 0) + 1);
-
-        // Product sales - Ensure items is an array before iterating
-        const itemsArray: CartItem[] = Array.isArray(order.items) ? order.items : [];
-        itemsArray.forEach((item: CartItem) => {
-          // Ensure item has farmerId and it matches (though query should pre-filter)
-          if (item.farmerId && item.farmerId === farmerId) {
-             const existing = productSales.get(item.productId);
-             productSales.set(
-               item.productId,
-               {
-                 name: item.name,
-                 quantity: (existing?.quantity || 0) + item.quantity
-               }
-             );
-          }
-        });
-      });
-
-      // Find top product
-      let topProductResult = null;
-      let maxSales = 0;
-      productSales.forEach((saleInfo, productId) => {
-        if (saleInfo.quantity > maxSales) {
-          maxSales = saleInfo.quantity;
-          topProductResult = { name: saleInfo.name, totalSold: saleInfo.quantity };
-        }
-      });
-
+      console.log("[ActivityDashboard] Setting final stats state...");
       setStats({
-        totalOrders: orders?.length || 0,
+        totalOrders: totalOrdersFromStats, // Calculated from monthly data
         totalProducts: totalProducts || 0,
-        monthlyOrders: Array.from(monthlyStats.entries())
-          .map(([month, count]) => ({ month, count }))
-          .sort((a, b) => {
-             const [monthA, yearA] = a.month.split(' ');
-             const [monthB, yearB] = b.month.split(' ');
-             const dateA = new Date(`${monthA} 1, ${yearA}`);
-             const dateB = new Date(`${monthB} 1, ${yearB}`);
-             if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) return 0;
-             return dateB.getTime() - dateA.getTime();
-          })
-          .slice(0, 6)
-          .reverse(),
+        monthlyOrders: formattedMonthlyOrders,
         topProduct: topProductResult,
       });
+
     } catch (error) {
       if (error instanceof Error) {
           console.error('Error fetching activity stats:', error.message);

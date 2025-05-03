@@ -46,11 +46,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session) {
           await fetchUserProfile(session.user.id);
           // Redirect to tabs after successful login
-          router.replace('/(tabs)/');
+          router.replace('/(tabs)/' as any);
         } else {
           setUser(null);
           // Redirect to login when session is lost
-          router.replace('/(auth)/login');
+          router.replace('/(auth)/login' as any);
         }
         setLoading(false);
       }
@@ -76,7 +76,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data && isMounted.current) {
+        console.log('[AuthContext] fetchUserProfile: Fetched profile data:', JSON.stringify(data, null, 2));
         setUser(data as User);
+        // Log the role specifically after setting user state
+        // Use a slight delay to ensure state update might have propagated if needed
+        setTimeout(() => {
+           console.log(`[AuthContext] fetchUserProfile: User state SHOULD now have role: ${user?.role}`);
+        }, 0);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);

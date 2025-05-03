@@ -7,6 +7,9 @@ export interface User {
   name: string;
   location?: string;
   farmSize?: number; // in hectares
+  avatarUrl?: string | null;
+  fieldPictureUrl?: string | null;
+  bio?: string | null;
   createdAt: string;
 }
 
@@ -35,14 +38,30 @@ export interface CartItem {
   farmerId: string;
 }
 
+export interface OrderItemWithProduct {
+  id: string; // order_item id
+  order_id: string;
+  product_id: string;
+  farmer_id: string;
+  quantity: number;
+  price_at_time: number;
+  created_at: string;
+  product: {
+    name: string;
+    image_url: string;
+  } | null; // Product might be null if deleted
+}
+
 export interface Order {
   id: string;
   buyerId: string;
-  items: CartItem[];
+  items: OrderItemWithProduct[];
   total: number;
   status: 'pending' | 'paid' | 'delivering' | 'delivered' | 'received' | 'cancelled';
-  paymentMethod: 'mobile_money' | 'cash';
+  paymentMethod: 'mobile_money' | 'cash' | string;
   createdAt: string;
+  delivery_address?: string | null;
+  delivery_details?: string | null;
 }
 
 export interface AgriculturalInput {

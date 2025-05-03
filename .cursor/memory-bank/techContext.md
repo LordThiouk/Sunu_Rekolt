@@ -46,10 +46,15 @@
 *   `react-native-phone-number-input`: For secure phone number entry.
 *   `expo-image`: Optimized image handling.
 *   `react-native-svg`: For SVG support.
+*   **react-native-url-polyfill**: For Supabase JS library compatibility.
+*   **expo-image-picker**: Installed using `--force` due to peer dependency conflicts. **Current suspect for build/rendering issues.**
+*   **base64-arraybuffer**: Installed using `--force` due to peer dependency conflicts.
 
 ## 7. Constraints & Considerations
 
 *   **Offline Capability:** Limited in MVP, planned for future phases (requires local storage like SQLite/AsyncStorage).
 *   **Network Conditions:** Potential for poor connectivity in target regions requires robust error handling and potentially offline-first strategies later.
 *   **Scalability:** Supabase provides auto-scaling, but Edge Function performance/limits need monitoring.
-*   **Security:** RLS is critical and must be thoroughly implemented and tested. 
+*   **Security:** RLS is critical and must be thoroughly implemented and tested.
+
+### Local Development 
