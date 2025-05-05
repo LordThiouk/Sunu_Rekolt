@@ -11,7 +11,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { AgriculturalInput } from '@/types';
 import Button from '@/components/Button';
-import { ShoppingBag } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons'; // Add Feather
 import { useCart } from '@/context/CartContext';
 import Colors from '@/constants/Colors';
 
@@ -123,7 +123,7 @@ export default function ShopScreen() {
           title="Ajouter au panier"
           onPress={() => handleAddToCart(item)}
           size="small"
-          icon={<ShoppingBag size={16} color="#fff" />}
+          icon={<Feather name="shopping-bag" size={16} color="#fff" />} // Use Feather
           style={styles.addButton}
         />
       </View>

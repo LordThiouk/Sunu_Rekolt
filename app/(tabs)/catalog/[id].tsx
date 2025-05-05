@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Product } from '@/types';
 import Button from '@/components/Button';
 import { useCart } from '@/context/CartContext';
-import { ShoppingBag, ArrowLeft } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 
 export default function ProductDetailScreen() {
@@ -108,7 +108,7 @@ export default function ProductDetailScreen() {
             onPress={() => router.back()}
             variant="primary"
             size="small"
-            icon={<ArrowLeft size={20} color="#fff" />}
+            icon={<Feather name="arrow-left" size={20} color="#fff" />}
             style={styles.backButtonInner}
           />
         </View>
@@ -167,7 +167,7 @@ export default function ProductDetailScreen() {
           onPress={handleAddToCart}
           loading={addingToCart}
           disabled={product.quantity <= 0}
-          icon={<ShoppingBag size={20} color="#fff" />}
+          icon={<Feather name="shopping-bag" size={20} color="#fff" />}
           iconPosition="left"
         />
       </View>

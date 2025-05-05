@@ -9,7 +9,7 @@ import {
   KeyboardTypeOptions,
   TouchableOpacity,
 } from 'react-native';
-import { Eye, EyeOff } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 
 interface TextInputProps {
@@ -69,7 +69,7 @@ export default function TextInput({
         <RNTextInput
           style={[
             styles.input,
-            icon && styles.inputWithIcon,
+            icon ? styles.inputWithIcon : null,
             multiline && styles.multilineInput,
             inputStyle,
           ]}
@@ -90,9 +90,9 @@ export default function TextInput({
         {secureTextEntry && (
           <TouchableOpacity onPress={togglePasswordVisibility} style={styles.passwordToggle}>
             {isPasswordVisible ? (
-              <EyeOff size={20} color={Colors.neutral[600]} />
+              <Feather name="eye-off" size={20} color={Colors.neutral[600]} />
             ) : (
-              <Eye size={20} color={Colors.neutral[600]} />
+              <Feather name="eye" size={20} color={Colors.neutral[600]} />
             )}
           </TouchableOpacity>
         )}

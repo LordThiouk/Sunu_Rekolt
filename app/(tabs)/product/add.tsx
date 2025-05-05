@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera, X } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import { supabase } from '@/lib/supabase';
@@ -45,7 +45,7 @@ export default function AddProductScreen() {
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [4, 3],
         quality: 1,
@@ -163,12 +163,12 @@ export default function AddProductScreen() {
             <View style={styles.imagePreviewContainer}>
               <Image source={{ uri: image }} style={styles.imagePreview} />
               <TouchableOpacity style={styles.removeImageButton} onPress={clearImage}>
-                <X size={24} color={Colors.neutral.white} />
+                <Feather name="x" size={24} color={Colors.neutral.white} />
               </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-              <Camera size={40} color={Colors.neutral[400]} />
+              <Feather name="camera" size={40} color={Colors.neutral[400]} />
               <Text style={styles.imagePickerText}>Ajouter une photo</Text>
             </TouchableOpacity>
           )}
@@ -272,8 +272,9 @@ export default function AddProductScreen() {
           </View>
 
           <Button
-            title="Soumettre le produit"
+            title={loading ? 'Ajout en cours...' : 'Ajouter le produit'}
             onPress={handleAddProduct}
+            disabled={loading || uploadingImage}
             loading={loading || uploadingImage}
             style={styles.submitButton}
           />

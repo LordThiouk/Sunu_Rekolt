@@ -9,7 +9,7 @@ import {
   Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Phone, Lock, User, MapPin, Ruler } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import { useAuth } from '@/context/AuthContext';
@@ -100,7 +100,7 @@ export default function RegisterScreen() {
             value={name}
             onChangeText={setName}
             placeholder="Votre nom complet"
-            icon={<User size={20} color={Colors.neutral[600]} />}
+            icon={<Feather name="user" size={20} color={Colors.neutral[600]} />}
           />
 
           <TextInput
@@ -109,7 +109,7 @@ export default function RegisterScreen() {
             onChangeText={setPhone}
             placeholder="Exemple: 77 123 45 67"
             keyboardType="phone-pad"
-            icon={<Phone size={20} color={Colors.neutral[600]} />}
+            icon={<Feather name="phone" size={20} color={Colors.neutral[600]} />}
           />
 
           <View style={styles.roleToggle}>
@@ -139,7 +139,7 @@ export default function RegisterScreen() {
                 value={location}
                 onChangeText={setLocation}
                 placeholder="Votre région/département"
-                icon={<MapPin size={20} color={Colors.neutral[600]} />}
+                icon={<Feather name="map-pin" size={20} color={Colors.neutral[600]} />}
               />
 
               <TextInput
@@ -148,7 +148,7 @@ export default function RegisterScreen() {
                 onChangeText={setFarmSize}
                 placeholder="Exemple: 5.5"
                 keyboardType="numeric"
-                icon={<Ruler size={20} color={Colors.neutral[600]} />}
+                icon={<Feather name="crop" size={20} color={Colors.neutral[600]} />}
               />
             </>
           )}
@@ -159,7 +159,7 @@ export default function RegisterScreen() {
             onChangeText={setPassword}
             placeholder="Choisir un mot de passe"
             secureTextEntry
-            icon={<Lock size={20} color={Colors.neutral[600]} />}
+            icon={<Feather name="lock" size={20} color={Colors.neutral[600]} />}
           />
 
           <TextInput
@@ -168,7 +168,7 @@ export default function RegisterScreen() {
             onChangeText={setConfirmPassword}
             placeholder="Confirmer votre mot de passe"
             secureTextEntry
-            icon={<Lock size={20} color={Colors.neutral[600]} />}
+            icon={<Feather name="lock" size={20} color={Colors.neutral[600]} />}
           />
 
           <Button

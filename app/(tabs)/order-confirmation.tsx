@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { CircleCheck as CheckCircle2, PhoneCall, MapPin, Info } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { Order, User, OrderItemWithProduct } from '@/types';
@@ -87,11 +87,23 @@ export default function OrderConfirmationScreen() {
         createdAt: orderData.created_at,
         // RPC returns items with product_name and item_id
         items: (itemsData || []).map((item: any) => ({ 
-          ...item, 
-          id: item.item_id // Map item_id back to id for consistency if needed by types/rendering
-        })), 
+           // Map RPC fields to the OrderItemWithProduct structure
+           id: item.item_id, // Map item_id -> id
+           order_id: orderData.id, // Add order_id
+           product_id: item.product_id || null, // Add product_id (might be null from RPC? check function)
+           farmer_id: item.farmer_id || null, // Add farmer_id (might be null from RPC? check function)
+           quantity: item.quantity,
+           price_at_time: item.price_at_time,
+           created_at: orderData.created_at, // Use order creation time for items?
+           product: { // Construct nested product object
+             id: item.product_id || 'unknown', 
+             name: item.product_name, // Map product_name -> product.name
+             image_url: item.product_image_url || '' // Map product_image_url (if available)
+           }
+        })),
       };
       
+      // Extract farmerId from the *mapped* items
       const farmerId = fullOrderData.items?.[0]?.farmer_id;
       setOrder(fullOrderData);
 
@@ -216,7 +228,7 @@ export default function OrderConfirmationScreen() {
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <CheckCircle2 size={60} color={Colors.success.DEFAULT} />
+          <Feather name="check-circle" size={60} color={Colors.success.DEFAULT} />
           <Text style={styles.title}>Commande confirmée!</Text>
           <Text style={styles.orderIdText}>Numéro de commande: #{order.id.slice(0, 8)}</Text>
         </View>
@@ -225,7 +237,7 @@ export default function OrderConfirmationScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Adresse de livraison</Text>
             <View style={styles.addressContainer}>
-              <MapPin size={20} color={Colors.neutral[600]} style={styles.addressIcon} />
+              <Feather name="map-pin" size={20} color={Colors.neutral[600]} style={styles.addressIcon} />
               <View>
                 <Text style={styles.addressText}>{order.delivery_address}</Text>
                 {order.delivery_details && (
@@ -240,7 +252,7 @@ export default function OrderConfirmationScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Contacter le vendeur</Text>
             <TouchableOpacity style={styles.phoneContainer} onPress={handleCallFarmer}>
-              <PhoneCall size={20} color={Colors.primary.DEFAULT} style={styles.phoneIcon} />
+              <Feather name="phone" size={20} color={Colors.primary.DEFAULT} style={styles.phoneIcon} />
               <Text style={styles.phoneText}>{farmerPhone}</Text>
             </TouchableOpacity>
             <Text style={styles.infoTextSmall}>Appelez pour coordonner la livraison.</Text>
@@ -248,38 +260,26 @@ export default function OrderConfirmationScreen() {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Récapitulatif de la commande</Text>
-
-          <View style={styles.orderItems}>
-            {order.items.map((item: any) => (
-              <View key={item.item_id} style={styles.orderItem}>
-                <Text style={styles.itemName}>{item.product_name || 'Produit inconnu'}</Text>
-                <View style={styles.itemDetails}>
-                  <Text style={styles.itemQuantity}>{item.quantity}x</Text>
-                  <Text style={styles.itemPrice}>
-                    {(item.price_at_time * item.quantity).toLocaleString()} CFA
-                  </Text>
-                </View>
+          <Text style={styles.sectionTitle}>Résumé de la commande</Text>
+          {order.items.map((item) => (
+            <View key={item.id} style={styles.itemContainer}>
+              <View style={styles.itemDetails}>
+                <Text style={styles.itemName}>{item.product?.name || 'Produit inconnu'}</Text>
+                <Text style={styles.itemInfo}>Quantité: {item.quantity}</Text>
+                <Text style={styles.itemInfo}>Prix unitaire: {item.price_at_time?.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</Text>
               </View>
-            ))}
-          </View>
-
-          <View style={styles.orderSummary}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Sous-total</Text>
-              <Text style={styles.summaryValue}>
-                {(order.total - 1000).toLocaleString()} CFA
+              <Text style={styles.itemTotal}>
+                 {(item.quantity * (item.price_at_time ?? 0)).toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}
               </Text>
             </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Livraison</Text>
-              <Text style={styles.summaryValue}>1 000 CFA</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.summaryRow}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>{order.total.toLocaleString()} CFA</Text>
-            </View>
+          ))}
+          <View style={styles.totalContainer}>
+            <Text style={styles.totalLabel}>Montant total:</Text>
+            <Text style={styles.totalValue}>{order.total?.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</Text>
+          </View>
+          <View style={styles.infoNoteContainer}>
+             <Feather name="info" size={16} color={Colors.neutral[500]} style={styles.infoIcon} />
+             <Text style={styles.infoNoteText}>Le paiement a été effectué via {getPaymentMethodName(order.paymentMethod)}.</Text>
           </View>
         </View>
 
@@ -328,28 +328,26 @@ export default function OrderConfirmationScreen() {
           </Text>
         </View>
 
-        <View style={styles.actions}>
-          {/* Conditionally render the Confirm Reception button */}
+        <View style={styles.bottomActions}>
           {user?.id === order.buyerId && order.status === 'delivered' && (
             <Button
-              title="Confirmer réception"
+              title="Confirmer la réception"
               onPress={handleConfirmReception}
               loading={isUpdating}
-              disabled={isUpdating}
-              style={styles.button}
               variant="primary"
             />
           )}
+          {order.status === 'received' && (
+            <View style={styles.infoNoteContainer}> 
+                <Feather name="check-circle" size={16} color={Colors.success.DEFAULT} style={styles.infoIcon} />
+                <Text style={[styles.infoNoteText, {color: Colors.success.DEFAULT}]}>Vous avez confirmé la réception.</Text>
+             </View>
+          )}
           <Button
-            title="Continuer mes achats"
+            title="Continuer les achats"
             onPress={handleContinueShopping}
-            style={styles.button}
-          />
-          <Button
-            title="Voir mon profil"
-            onPress={handleViewProfile}
             variant="outline"
-            style={styles.button}
+            style={styles.continueButton}
           />
         </View>
       </ScrollView>
@@ -411,13 +409,7 @@ const styles = StyleSheet.create({
     color: Colors.neutral[800],
     marginBottom: 16,
   },
-  orderItems: {
-    backgroundColor: Colors.neutral[50],
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 16,
-  },
-  orderItem: {
+  itemContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -425,50 +417,32 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutral[200],
   },
+  itemDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   itemName: {
     flex: 1,
     fontSize: 16,
     color: Colors.neutral[800],
   },
-  itemDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  itemQuantity: {
-    fontSize: 16,
+  itemInfo: {
+    fontSize: 14,
     color: Colors.neutral[600],
     marginRight: 8,
   },
-  itemPrice: {
+  itemTotal: {
     fontSize: 16,
     fontWeight: '500',
     color: Colors.neutral[800],
     minWidth: 80,
     textAlign: 'right',
   },
-  orderSummary: {
+  totalContainer: {
     backgroundColor: Colors.neutral[50],
     borderRadius: 8,
     padding: 16,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  summaryLabel: {
-    fontSize: 16,
-    color: Colors.neutral[600],
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors.neutral[800],
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.neutral[300],
-    marginVertical: 8,
+    marginBottom: 16,
   },
   totalLabel: {
     fontSize: 18,
@@ -532,12 +506,12 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: Colors.neutral[700],
   },
-  actions: {
+  bottomActions: {
     padding: 16,
     gap: 12,
     marginBottom: 16,
   },
-  button: {
+  continueButton: {
     marginBottom: 12,
   },
   addressContainer: {
@@ -584,5 +558,19 @@ const styles = StyleSheet.create({
     color: Colors.neutral[500],
     textAlign: 'center',
     marginTop: 8,
+  },
+  infoNoteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    backgroundColor: Colors.neutral[50],
+    borderRadius: 4,
+  },
+  infoIcon: {
+    marginRight: 8,
+  },
+  infoNoteText: {
+    fontSize: 14,
+    color: Colors.neutral[700],
   },
 });

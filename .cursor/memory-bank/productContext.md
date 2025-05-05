@@ -18,7 +18,7 @@ Sunu Rekolt addresses key challenges in the Senegalese agricultural market:
 
 ## 3. How It Should Work (User Experience)
 
-*   **Simple Onboarding:** Quick registration via phone number and OTP.
+*   **Simple Onboarding:** Quick registration via phone number and password.
 *   **Intuitive Navigation:** Mobile-first design with clear tabs/sections (Dashboard/Catalogue, Orders, Profile, etc.).
 *   **Direct Connection:** Facilitate direct communication (via phone call outside the app) between buyer and farmer *after* a confirmed order to streamline logistics/delivery.
 *   **Trust Building:** Reliability scores visible to buyers.

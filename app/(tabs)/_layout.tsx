@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Chrome as Home, Store, ShoppingBag, User } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { useCart } from '@/context/CartContext';
 import { Text, View, StyleSheet } from 'react-native';
@@ -37,7 +37,7 @@ export default function TabLayout() {
         options={{
           title: 'Catalogue',
           tabBarLabel: 'Catalogue',
-          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -45,7 +45,7 @@ export default function TabLayout() {
         options={{
           title: 'Boutique',
           tabBarLabel: 'Boutique',
-          tabBarIcon: ({ color, size }) => <Store size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Feather name="shopping-bag" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -55,7 +55,7 @@ export default function TabLayout() {
           tabBarLabel: 'Panier',
           tabBarIcon: ({ color, size }) => (
             <View>
-              <ShoppingBag size={size} color={color} />
+              <Feather name="shopping-cart" size={size} color={color} />
               {count > 0 && (
                 <View style={styles.badgeContainer}>
                   <Text style={styles.badgeText}>
@@ -72,7 +72,7 @@ export default function TabLayout() {
         options={{
           title: 'Profil',
           tabBarLabel: 'Profil',
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Feather name="user" size={size} color={color} />,
         }}
       />
       

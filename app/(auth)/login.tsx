@@ -11,7 +11,7 @@ import {
   Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Phone, Lock } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import { useAuth } from '@/context/AuthContext';
@@ -134,7 +134,7 @@ export default function LoginScreen() {
             }}
             placeholder="Exemple: 77 123 45 67"
             keyboardType="phone-pad"
-            icon={<Phone size={20} color={Colors.neutral[600]} />}
+            icon={<Feather name="phone" size={20} color={Colors.neutral[600]} />}
           />
 
           <TextInput
@@ -146,7 +146,7 @@ export default function LoginScreen() {
             }}
             placeholder="Votre mot de passe"
             secureTextEntry
-            icon={<Lock size={20} color={Colors.neutral[600]} />}
+            icon={<Feather name="lock" size={20} color={Colors.neutral[600]} />}
           />
 
           <Button

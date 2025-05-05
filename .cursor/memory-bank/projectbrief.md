@@ -12,7 +12,7 @@ Develop a mobile application (React Native + Supabase) connecting Senegalese far
 
 ## 3. Key Features (MVP v1.0)
 
-*   Phone number authentication (OTP via Twilio).
+*   Phone number authentication (verification via Twilio).
 *   Role-based access (Farmer, Buyer, Admin).
 *   Product listing (Farmer) & Admin validation.
 *   Order placement & history (Buyer).

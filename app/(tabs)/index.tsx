@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TextInput, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Search, Filter, Plus } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { Product, ProductCategory, PRODUCT_CATEGORIES } from '@/types';
 import ProductCard from '@/components/ProductCard';
@@ -83,7 +83,7 @@ export default function CatalogScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.searchContainer}>
-          <Search size={20} color={Colors.neutral[500]} style={styles.searchIcon} />
+          <Feather name="search" size={20} color={Colors.neutral[500]} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Rechercher des produits..."
@@ -98,7 +98,7 @@ export default function CatalogScreen() {
             title="Ajouter"
             onPress={navigateToAddProduct}
             size="small"
-            icon={<Plus size={18} color="#fff" />}
+            icon={<Feather name="plus" size={18} color="#fff" />}
             style={styles.addButton}
           />
         )}

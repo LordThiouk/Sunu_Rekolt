@@ -18,7 +18,7 @@ import { supabase } from '@/lib/supabase';
 import TextInput from '@/components/TextInput';
 import Button from '@/components/Button';
 import Colors from '@/constants/Colors';
-import { MapPin, Info } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import { CartItem } from '@/types'; // Import CartItem type if not already
 
 export default function PaymentScreen() {
@@ -173,14 +173,14 @@ export default function PaymentScreen() {
             value={deliveryAddress}
             onChangeText={setDeliveryAddress}
             placeholder="Quartier, rue, numéro de maison..."
-            icon={<MapPin size={20} color={Colors.neutral[600]} />}
+            icon={<Feather name="map-pin" size={20} color={Colors.neutral[600]} />}
           />
           <TextInput
             label="Détails supplémentaires (optionnel)"
             value={deliveryDetails}
             onChangeText={setDeliveryDetails}
             placeholder="Étage, bâtiment, point de repère..."
-            icon={<Info size={20} color={Colors.neutral[600]} />}
+            icon={<Feather name="info" size={20} color={Colors.neutral[600]} />}
             multiline
             numberOfLines={3}
             style={{ height: 80 }}

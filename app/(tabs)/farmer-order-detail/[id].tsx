@@ -11,13 +11,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  ClipboardList as ListChecks,
-  PhoneCall,
-  MapPin,
-  User as UserIcon,
-  Package
-} from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { Order, User, OrderItemWithProduct } from '@/types';
@@ -270,96 +264,99 @@ export default function FarmerOrderDetailScreen() {
   const buyer = order.buyer;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      {/* Header */}
       <View style={styles.header}>
-        <View style={[styles.statusBadge, getStatusStyle(order.status)]}>
-          <Text style={[styles.statusText, getStatusTextStyle(order.status)]}>
-            {getStatusText(order.status)}
-          </Text>
+         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+           <Feather name="chevron-left" size={26} color={Colors.primary.DEFAULT} />
+         </TouchableOpacity>
+         <Text style={styles.headerTitle}>Détail Commande Reçue</Text>
+         <View style={{ width: 26 }} /> {/* Spacer */}
+       </View>
+
+      {/* Order Summary */}
+      <View style={styles.sectionContainer}>
+        <View style={styles.sectionHeader}>
+          <Feather name="list" size={20} color={Colors.neutral[700]} style={styles.sectionIcon} /> {/* Feather - list */}
+          <Text style={styles.sectionTitle}>Résumé de la Commande</Text>
         </View>
-        <Text style={styles.title}>Commande Reçue</Text>
-        <Text style={styles.orderIdText}>ID: {order.id.slice(0, 8)}...</Text>
-        <Text style={styles.dateText}>
-           {new Date(order.createdAt).toLocaleString('fr-FR', { 
-               year: 'numeric', 
-               month: 'long', 
-               day: 'numeric',
-               hour: '2-digit',
-               minute: '2-digit'
-            })}
-        </Text>
+        {/* ... Order ID, Date, Total, Status ... */}
+         <View style={styles.summaryRow}>
+           <Text style={styles.summaryLabel}>Commande ID:</Text>
+           <Text style={styles.summaryValue} selectable>{order.id}</Text>
+         </View>
+         <View style={styles.summaryRow}>
+           <Text style={styles.summaryLabel}>Date:</Text>
+           <Text style={styles.summaryValue}>
+             {new Date(order.createdAt).toLocaleDateString('fr-FR')} à {new Date(order.createdAt).toLocaleTimeString('fr-FR')}
+           </Text>
+         </View>
+         <View style={styles.summaryRow}>
+           <Text style={styles.summaryLabel}>Total:</Text>
+           <Text style={styles.summaryValueBold}>{order.total.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</Text>
+         </View>
+         <View style={styles.summaryRow}>
+           <Text style={styles.summaryLabel}>Statut:</Text>
+           <View style={[styles.orderStatusBadge, getStatusStyle(order.status)]}>
+               <Text style={[styles.orderStatusText, getStatusTextStyle(order.status)]}>
+                 {getStatusText(order.status)}
+              </Text>
+             </View>
+         </View>
+         <View style={styles.summaryRow}>
+           <Text style={styles.summaryLabel}>Paiement:</Text>
+           <Text style={styles.summaryValue}>{getPaymentMethodName(order.paymentMethod)}</Text>
+         </View>
       </View>
 
-      {/* Buyer Information Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Informations de l'acheteur</Text>
-        {buyer ? (
-          <View style={styles.buyerInfoContainer}>
-            <View style={styles.buyerDetailRow}>
-              <UserIcon size={20} color={Colors.neutral[600]} style={styles.icon} />
-              <Text style={styles.buyerText}>{buyer.name}</Text>
-            </View>
-            <View style={styles.buyerDetailRow}>
-              <PhoneCall size={20} color={Colors.neutral[600]} style={styles.icon} />
-              <TouchableOpacity onPress={handleCallBuyer}>
-                <Text style={[styles.buyerText, styles.phoneText]}>{buyer.phone}</Text>
-              </TouchableOpacity>
-            </View>
-             {/* Display Delivery Address if available */}
-            {order.delivery_address && (
-              <View style={styles.buyerDetailRow}>
-                  <MapPin size={20} color={Colors.neutral[600]} style={styles.icon} />
-                  <Text style={styles.buyerText} numberOfLines={2} ellipsizeMode="tail">
-                     {order.delivery_address}
-                     {order.delivery_details ? ` (${order.delivery_details})` : ''}
-                  </Text>
-              </View>
-            )}
+       {/* Buyer Information */}
+      {order.buyer && (
+        <View style={styles.sectionContainer}>
+          <View style={styles.sectionHeader}>
+             <Feather name="user" size={20} color={Colors.neutral[700]} style={styles.sectionIcon} /> {/* Feather */}
+            <Text style={styles.sectionTitle}>Informations de l'Acheteur</Text>
           </View>
-        ) : (
-          <Text>Informations de l'acheteur non disponibles.</Text>
-        )}
-      </View>
-
-      {/* Items Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Articles commandés (par vous)</Text>
-        <View style={styles.itemsContainer}>
-          {items.map((item) => (
-            <View key={item.id} style={styles.itemRow}>
-              {/* Optionally add Image component here if needed using item.product.image_url */}
-              <Text style={styles.itemName}>{item.product?.name || 'Produit Inconnu'}</Text>
-              <Text style={styles.itemQuantity}>x {item.quantity}</Text>
-              <Text style={styles.itemPrice}>{(item.price_at_time * item.quantity).toLocaleString()} CFA</Text>
-            </View>
-          ))}
+          <View style={styles.buyerInfoRow}>
+            <Text style={styles.summaryLabel}>Nom:</Text>
+            <Text style={styles.summaryValue}>{order.buyer.name}</Text>
+          </View>
+          <View style={styles.buyerInfoRow}>
+             <Text style={styles.summaryLabel}>Téléphone:</Text>
+             <TouchableOpacity onPress={handleCallBuyer} style={styles.phoneLink}>
+                 <Feather name="phone" size={16} color={Colors.primary.DEFAULT} style={styles.phoneIcon} /> {/* Feather */}
+                <Text style={styles.phoneText}>{order.buyer.phone}</Text>
+             </TouchableOpacity>
+          </View>
+          {/* Optionally add buyer location if available/needed */}
         </View>
-      </View>
+      )}
 
-      {/* Summary Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Résumé de la commande</Text>
-        <View style={styles.summaryContainer}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Articles (vos articles)</Text>
-            {/* Calculate subtotal for farmer's items if needed, or show full order total */}
-            <Text style={styles.summaryValue}>{items.reduce((sum, item) => sum + item.price_at_time * item.quantity, 0).toLocaleString()} CFA</Text>
-          </View>
-          <View style={styles.summaryRow}>
-             <Text style={styles.summaryLabel}>Total Commande Complète</Text>
-             <Text style={styles.summaryValue}>{order.total.toLocaleString()} CFA</Text>
-          </View>
-           <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Méthode de paiement</Text>
-              <Text style={styles.summaryValue}>{getPaymentMethodName(order.paymentMethod)}</Text>
-           </View>
+      {/* Order Items */}
+      <View style={styles.sectionContainer}>
+        <View style={styles.sectionHeader}>
+          <Feather name="package" size={20} color={Colors.neutral[700]} style={styles.sectionIcon} /> {/* Feather */}
+          <Text style={styles.sectionTitle}>Articles Commandés</Text>
         </View>
+        {/* ... items mapping ... */}
+         {items.length === 0 && <Text style={styles.noItemsText}>Aucun article trouvé pour vous dans cette commande.</Text>}
+         {items.map(item => (
+            <View key={item.id} style={styles.itemContainer}>
+               {/* <Image source={{ uri: item.product?.image_url }} style={styles.itemImage} /> */}
+               <View style={styles.itemDetails}>
+                 <Text style={styles.itemName}>{item.product?.name || 'Produit inconnu'}</Text>
+                 <Text style={styles.itemInfo}>Quantité: {item.quantity}</Text>
+                 <Text style={styles.itemInfo}>Prix unitaire: {item.price_at_time.toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</Text>
+               </View>
+               <Text style={styles.itemTotal}>{(item.quantity * item.price_at_time).toLocaleString('fr-FR', { style: 'currency', currency: 'XOF' })}</Text>
+             </View>
+         ))}
       </View>
 
-      {/* Actions Section */}
+      {/* Farmer Actions */}
       <View style={styles.actionsContainer}>
         {renderFarmerActionButtons()}
       </View>
+
     </ScrollView>
   );
 }
@@ -367,32 +364,33 @@ export default function FarmerOrderDetailScreen() {
 // Styles definition (ensure all needed styles from confirmation screen are merged here)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.neutral[50] },
-  contentContainer: { paddingBottom: 32 },
+  scrollContent: { paddingBottom: 32 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 16 },
   errorText: { color: Colors.error.DEFAULT, marginBottom: 16, textAlign: 'center', fontSize: 16 },
   header: { alignItems: 'center', padding: 20, backgroundColor: Colors.neutral.white, borderBottomWidth: 1, borderBottomColor: Colors.neutral[200] },
-  title: { fontSize: 22, fontWeight: '700', color: Colors.neutral[800], marginTop: 12, marginBottom: 4 },
-  orderIdText: { fontSize: 14, color: Colors.neutral[500], marginBottom: 12 },
-  dateText: { fontSize: 14, color: Colors.neutral[500], marginBottom: 16 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, marginBottom: 8 },
-  statusText: { fontSize: 12, fontWeight: '600', color: Colors.neutral.white },
-  section: { backgroundColor: Colors.neutral.white, marginHorizontal: 16, marginTop: 16, borderRadius: 8, padding: 16, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowOffset: { width: 0, height: 1 } },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: Colors.neutral[700], marginBottom: 12 },
-  buyerInfoContainer: { gap: 12 },
-  buyerDetailRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  icon: { marginRight: 10 },
-  buyerText: { fontSize: 16, color: Colors.neutral[800], flexShrink: 1 },
-  phoneText: { color: Colors.primary.DEFAULT, fontWeight: '500' },
-  itemsContainer: { gap: 8 },
-  itemRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.neutral[100] },
-  itemName: { flex: 1, fontSize: 15, color: Colors.neutral[700], marginLeft: 8 },
-  itemQuantity: { fontSize: 15, color: Colors.neutral[600], marginRight: 10 },
-  itemPrice: { fontSize: 15, fontWeight: '500', color: Colors.neutral[800], minWidth: 70, textAlign: 'right' },
-  summaryContainer: { gap: 10 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: Colors.neutral[800], marginTop: 12, marginBottom: 4 },
+  backButton: { padding: 8 },
+  sectionContainer: { backgroundColor: Colors.neutral.white, marginHorizontal: 16, marginTop: 16, borderRadius: 8, padding: 16, elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowOffset: { width: 0, height: 1 } },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  sectionIcon: { marginRight: 10 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: Colors.neutral[700] },
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   summaryLabel: { fontSize: 15, color: Colors.neutral[600] },
   summaryValue: { fontSize: 15, fontWeight: '500', color: Colors.neutral[800] },
+  summaryValueBold: { fontSize: 15, fontWeight: '700', color: Colors.neutral[800] },
+  orderStatusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 15, marginBottom: 8 },
+  orderStatusText: { fontSize: 12, fontWeight: '600', color: Colors.neutral.white },
+  buyerInfoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  phoneLink: { flexDirection: 'row', alignItems: 'center', padding: 8 },
+  phoneIcon: { marginRight: 10 },
+  phoneText: { color: Colors.primary.DEFAULT, fontWeight: '500' },
+  noItemsText: { color: Colors.neutral[500], textAlign: 'center', marginTop: 16 },
+  itemContainer: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: Colors.neutral[100] },
+  itemDetails: { flex: 1 },
+  itemName: { fontSize: 15, color: Colors.neutral[700], marginLeft: 8 },
+  itemInfo: { fontSize: 15, color: Colors.neutral[600], marginTop: 4 },
+  itemTotal: { fontSize: 15, fontWeight: '500', color: Colors.neutral[800], minWidth: 70, textAlign: 'right' },
   actionsContainer: { padding: 16, borderTopWidth: 1, borderTopColor: Colors.neutral[100], backgroundColor: Colors.neutral.white },
   actionButton: { marginBottom: 12 },
   // Status colors

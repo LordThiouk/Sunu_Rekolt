@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Minus, Plus, Trash2 } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import { CartItem as CartItemType } from '@/types';
 import Colors from '@/constants/Colors';
 
@@ -40,14 +40,14 @@ export default function CartItem({ item, onUpdateQuantity, onRemove }: CartItemP
             style={styles.quantityButton} 
             onPress={decreaseQuantity}
           >
-            <Minus size={16} color={Colors.neutral[700]} />
+            <Feather name="minus" size={16} color={Colors.neutral[700]} />
           </TouchableOpacity>
           <Text style={styles.quantity}>{item.quantity}</Text>
           <TouchableOpacity 
             style={styles.quantityButton} 
             onPress={increaseQuantity}
           >
-            <Plus size={16} color={Colors.neutral[700]} />
+            <Feather name="plus" size={16} color={Colors.neutral[700]} />
           </TouchableOpacity>
         </View>
       </View>
@@ -56,7 +56,7 @@ export default function CartItem({ item, onUpdateQuantity, onRemove }: CartItemP
           {(item.price * item.quantity).toLocaleString()} CFA
         </Text>
         <TouchableOpacity style={styles.removeButton} onPress={handleRemove}>
-          <Trash2 size={20} color={Colors.error.DEFAULT} />
+          <Feather name="trash-2" size={20} color={Colors.error.DEFAULT} />
         </TouchableOpacity>
       </View>
     </View>

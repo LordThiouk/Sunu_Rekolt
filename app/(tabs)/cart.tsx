@@ -7,7 +7,7 @@ import {
   Alert 
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { CreditCard } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 import { useCart } from '@/context/CartContext';
 import CartItem from '@/components/CartItem';
 import Button from '@/components/Button';
@@ -71,7 +71,7 @@ export default function CartScreen() {
           <Text style={styles.emptyText}>Votre panier est vide</Text>
           <Button
             title="Parcourir les produits"
-            onPress={() => router.push('/(tabs)/')}
+            onPress={() => router.push('/')}
             variant="outline"
             style={styles.browseButton}
           />
@@ -112,7 +112,7 @@ export default function CartScreen() {
             <Button
               title="Procéder au paiement"
               onPress={handleCheckout}
-              icon={<CreditCard size={20} color="#fff" />}
+              icon={<Feather name="credit-card" size={20} color="#fff" />}
             />
           </View>
         </>

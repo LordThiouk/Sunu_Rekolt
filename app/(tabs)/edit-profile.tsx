@@ -13,17 +13,23 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system'; // Import FileSystem
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/Button'; // Assuming Button component exists
+import { User } from '@/types'; // Import User type
 import Colors from '@/constants/Colors';
-import { User as UserIcon, Phone as PhoneIcon, MapPin as MapPinIcon, Tractor as TractorIcon } from 'lucide-react-native'; // Assuming TractorIcon exists or use another appropriate icon
+import { Feather } from '@expo/vector-icons'; // Add Feather
 import { decode } from 'base64-arraybuffer'; // Needed for base64 conversion
+
+// Import the placeholder images
+import DefaultAvatarPlaceholder from '../../assets/images/default-avatar.png';
+import DefaultFieldPlaceholder from '../../assets/images/default-field.png';
 
 const BUCKET_NAME = 'user-uploads';
 
 export default function EditProfileScreen() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [farmSize, setFarmSize] = useState('');
@@ -152,18 +158,42 @@ export default function EditProfileScreen() {
 
        // --- Update Profile Table ---
      console.log('Updating profile with changes:', changedUpdates);
-     const { error } = await supabase
+     const { data: updateResult, error } = await supabase
        .from('profiles')
        .update(changedUpdates)
-       .eq('id', user.id);
+       .eq('id', user.id)
+       .select()
+       .single();
 
      if (error) throw error;
+
+     if (updateResult) {
+       console.log('[EditProfile] Update successful, result:', JSON.stringify(updateResult, null, 2));
+       // PASS ONLY THE VERIFIED CHANGES TO THE CONTEXT UPDATE FUNCTION
+       // Convert nulls to undefined to match User type for context update
+       const updatesForContext: Partial<User> = {};
+       for (const key in changedUpdates) {
+           if (Object.prototype.hasOwnProperty.call(changedUpdates, key)) {
+               const value = changedUpdates[key as keyof typeof changedUpdates];
+               updatesForContext[key as keyof User] = value === null ? undefined : value;
+           }
+       }
+       // Update the user state in AuthContext
+       updateUser(updatesForContext as Partial<User>);
+     } else {
+       console.warn('[EditProfile] Update successful but no data returned from select. Context not updated.')
+       // Fallback or just alert success without context update?
+       // Optionally call fetchUserProfile from context if exposed, or rely on next app load.
+     }
 
      Alert.alert('Succès', 'Profil mis à jour.');
       // Reset selected images after successful save
       setSelectedAvatarUri(null);
       setSelectedFieldPictureUri(null);
-      // TODO: Update AuthContext state with new user data (including URLs) & navigate back
+      // TODO: Update AuthContext state with new user data (including URLs) & navigate back - DONE via updateUser
+
+      // Optional: Navigate back to profile screen
+      // router.back(); 
 
    } catch (error) {
      const message = error instanceof Error ? error.message : 'Une erreur inconnue est survenue.';
@@ -188,7 +218,6 @@ export default function EditProfileScreen() {
     try {
       setUploading(true); // Indicate activity
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: type === 'avatar' ? [1, 1] : [16, 9], // Square for avatar, wide for field
         quality: 0.7, // Lower quality slightly for faster uploads
@@ -220,33 +249,39 @@ export default function EditProfileScreen() {
         const path = `${type}s/${userId}/${Date.now()}.${fileExt}`;
         const contentType = `image/${fileExt}`; // Basic content type
 
-        // Fetch the image data as a blob
-        // Note: `fetch` requires network access. Consider `expo-file-system` for reading local files if needed.
-        const response = await fetch(uri);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch image: ${response.statusText}`);
-        }
-        const blob = await response.blob();
+        // Read the image file as a base64 string
+        console.log(`Reading file as base64: ${uri}`);
+        const base64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+        console.log('File read successfully.');
 
         console.log(`Uploading image to bucket: ${BUCKET_NAME}, path: ${path}, type: ${contentType}`);
 
-        // Upload to Supabase Storage
+        // Upload the base64 string to Supabase Storage
         const { data, error: uploadError } = await supabase.storage
             .from(BUCKET_NAME)
-            .upload(path, blob, {
+            // Upload base64 string directly. The JS client automatically handles decoding.
+            .upload(path, base64, {
                 contentType,
                 upsert: true, // Overwrite if somehow the exact same timestamp exists
-                cacheControl: '3600' // Optional: Cache for 1 hour
+                cacheControl: '3600', // Optional: Cache for 1 hour
+                // Specify encoding since we are uploading base64
+                duplex: 'base64' 
             });
 
         if (uploadError) {
             console.error('Error uploading image:', uploadError);
+            // Add more specific error logging if possible
+            if (uploadError.message.includes('mime type')) {
+              console.error('--> Possible issue with contentType:', contentType);
+            } else if (uploadError.message.includes('policy')) {
+              console.error('--> Possible issue with Storage RLS policy.');
+            }
             throw uploadError;
         }
 
         if (!data?.path) {
              console.error('Upload succeeded but path is missing in response:', data);
-             throw new Error("L\'upload a réussi mais le chemin du fichier est manquant.");
+             throw new Error("L'upload a réussi mais le chemin du fichier est manquant.");
         }
 
         console.log('Upload successful, getting public URL for path:', data.path);
@@ -300,7 +335,7 @@ export default function EditProfileScreen() {
                  <Image
                     style={styles.profileImage}
                     source={{ uri: selectedAvatarUri || user?.avatarUrl || undefined }}
-                    placeholder={require('@/assets/images/default-avatar.png')} // Use a placeholder asset
+                    placeholder={DefaultAvatarPlaceholder} // Use imported variable
                     contentFit="cover"
                     transition={100}
                  />
@@ -318,7 +353,7 @@ export default function EditProfileScreen() {
 
         {/* Name Input */}
         <View style={styles.inputGroup}>
-          <UserIcon size={18} color={Colors.neutral[500]} style={styles.inputIcon} />
+          <Feather name="user" size={18} color={Colors.neutral[500]} style={styles.inputIcon} />
           <Text style={styles.label}>Nom complet</Text>
           <TextInput
             style={styles.input}
@@ -333,7 +368,7 @@ export default function EditProfileScreen() {
 
         {/* Phone (Read-only) */}
         <View style={styles.inputGroup}>
-           <PhoneIcon size={18} color={Colors.neutral[500]} style={styles.inputIcon} />
+           <Feather name="phone" size={18} color={Colors.neutral[500]} style={styles.inputIcon} />
            <Text style={styles.label}>Numéro de téléphone</Text>
            <Text style={styles.readOnlyText}>{user.phone}</Text>
         </View>
@@ -341,7 +376,7 @@ export default function EditProfileScreen() {
         {/* Location Input (Farmer Only) */}
         {user.role === 'farmer' && (
           <View style={styles.inputGroup}>
-            <MapPinIcon size={18} color={Colors.neutral[500]} style={styles.inputIcon} />
+            <Feather name="map-pin" size={18} color={Colors.neutral[500]} style={styles.inputIcon} />
             <Text style={styles.label}>Localisation (Ville/Village)</Text>
             <TextInput
               style={styles.input}
@@ -358,7 +393,7 @@ export default function EditProfileScreen() {
         {/* Farm Size Input (Farmer Only) */}
         {user.role === 'farmer' && (
           <View style={styles.inputGroup}>
-            <TractorIcon size={18} color={Colors.neutral[500]} style={styles.inputIcon} />
+            <Feather name="square" size={18} color={Colors.neutral[500]} style={styles.inputIcon} />
             <Text style={styles.label}>Taille de l'exploitation (hectares)</Text>
             <TextInput
               style={styles.input}
@@ -396,7 +431,7 @@ export default function EditProfileScreen() {
                     <Image
                         style={styles.fieldImage}
                         source={{ uri: selectedFieldPictureUri || user?.fieldPictureUrl || undefined }}
-                        placeholder={require('@/assets/images/default-field.png')} // Use a placeholder asset
+                        placeholder={DefaultFieldPlaceholder} // Use imported variable
                         contentFit="cover"
                         transition={100}
                     />

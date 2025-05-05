@@ -11,6 +11,7 @@ interface AuthContextType {
   signIn: (phone: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (phone: string, password: string, role: UserRole, name: string, location?: string, farmSize?: number) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -150,6 +151,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    if (isMounted.current) {
+        setUser(prevUser => {
+            if (!prevUser) return null; // Should not happen if called correctly
+            // Ensure updates use correct keys if necessary (e.g., farm_size vs farmSize)
+            // Here we assume updates uses the keys from the User type (camelCase)
+            const updatedUser = { ...prevUser, ...updates };
+            console.log('[AuthContext] updateUser: Updating user state:', JSON.stringify(updatedUser, null, 2));
+            return updatedUser;
+        });
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -159,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signUp,
         signOut,
+        updateUser,
       }}
     >
       {children}
