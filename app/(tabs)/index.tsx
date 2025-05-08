@@ -35,6 +35,10 @@ export default function CatalogScreen() {
         query = query.eq('category', selectedCategory);
       }
       
+      if (user && user.role === 'farmer') {
+        query = query.neq('farmer_id', user.id);
+      }
+      
       const { data, error } = await query;
       
       if (error) throw error;

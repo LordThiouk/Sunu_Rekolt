@@ -15,6 +15,7 @@ export default function AuthLayout() {
         headerBackTitle: 'Retour',
       }}
     >
+      <Stack.Screen name="index" options={{ title: 'Bienvenue', headerShown: false }} />
       <Stack.Screen name="login" options={{ title: 'Connexion', headerShown: false }} />
       <Stack.Screen name="register" options={{ title: 'Inscription', headerShown: false }} />
     </Stack>

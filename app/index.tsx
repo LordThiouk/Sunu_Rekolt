@@ -13,11 +13,11 @@ export default function Root() {
     const inAuthGroup = segments[0] === '(auth)';
     
     if (!session && !inAuthGroup) {
-      // Redirect to login if not logged in
-      router.replace('/(auth)/login');
+      // Redirect to the auth group (which will default to its index - our welcome screen)
+      router.replace('/(auth)'); 
     } else if (session && inAuthGroup) {
       // Redirect to home if logged in
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)');
     }
   }, [session, loading, segments]);
 

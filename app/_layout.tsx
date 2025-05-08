@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import { BalooBhai2_400Regular, BalooBhai2_500Medium, BalooBhai2_600SemiBold, BalooBhai2_700Bold } from '@expo-google-fonts/baloo-bhai-2';
 import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
@@ -18,6 +19,10 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    BalooBhai2_400Regular,
+    BalooBhai2_500Medium, 
+    BalooBhai2_600SemiBold,
+    BalooBhai2_700Bold,
   });
 
   useEffect(() => {

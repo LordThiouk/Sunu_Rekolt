@@ -8,7 +8,10 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ScrollView,
-  Alert
+  Alert,
+  ImageBackground,
+  SafeAreaView,
+  ActivityIndicator
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -101,137 +104,238 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Image
-            source={{ uri: 'https://images.pexels.com/photos/2252584/pexels-photo-2252584.jpeg' }}
-            style={styles.logo}
-          />
-          <Text style={styles.title}>Sunu Rekolt</Text>
-          <Text style={styles.subtitle}>
-            Connecter les agriculteurs aux acheteurs au Sénégal
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-
-          <TextInput
-            label="Numéro de téléphone"
-            value={phone}
-            onChangeText={(text) => {
-              setPhone(text);
-              setError(''); // Clear error when user types
-            }}
-            placeholder="Exemple: 77 123 45 67"
-            keyboardType="phone-pad"
-            icon={<Feather name="phone" size={20} color={Colors.neutral[600]} />}
-          />
-
-          <TextInput
-            label="Mot de passe"
-            value={password}
-            onChangeText={(text) => {
-              setPassword(text);
-              setError(''); // Clear error when user types
-            }}
-            placeholder="Votre mot de passe"
-            secureTextEntry
-            icon={<Feather name="lock" size={20} color={Colors.neutral[600]} />}
-          />
-
-          <Button
-            title="Se connecter"
-            onPress={handleLogin}
-            loading={loading}
-            style={styles.loginButton}
-          />
-          
-          <TouchableOpacity
-            style={styles.registerLink}
-            onPress={() => router.push('/(auth)/register')}
+    <SafeAreaView style={{ flex: 1 }}>
+      <ImageBackground 
+        source={require('@/assets/images/pattern-bg.png')}
+        style={{ flex: 1 }}
+      >
+        {/* Semi-transparent overlay for green tint */}
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(240, 255, 240, 0.85)',
+        }} />
+        
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.container}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.registerText}>
-              Nouveau sur Sunu Rekolt? <Text style={styles.registerHighlight}>S'inscrire</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <View style={styles.logoContainer}>
+              <View style={styles.iconContainer}>
+                <Image 
+                  source={require('@/assets/images/icon-white-svg.png')} 
+                  style={styles.icon}
+                />
+              </View>
+              <Text style={styles.title}>Connexion</Text>
+            </View>
+
+            <View style={styles.formContainer}>
+              {error ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+
+              <Text style={styles.inputLabel}>Numéro de téléphone</Text>
+              <View style={styles.phoneInputContainer}>
+                <View style={styles.countryCodeContainer}>
+                  <Text style={styles.countryFlag}>🇸🇳</Text>
+                  <Text style={styles.countryCode}>+221</Text>
+                </View>
+                <TextInput
+                  value={phone}
+                  onChangeText={(text) => {
+                    setPhone(text);
+                    setError('');
+                  }}
+                  placeholder="77 123 45 67"
+                  keyboardType="phone-pad"
+                  style={styles.phoneInput}
+                  inputStyle={styles.inputText}
+                />
+              </View>
+
+              <Text style={styles.inputLabel}>Mot de passe</Text>
+              <TextInput
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setError('');
+                }}
+                placeholder="Votre mot de passe"
+                secureTextEntry
+                icon={<Feather name="lock" size={20} color={Colors.neutral[600]} />}
+                style={styles.passwordInput}
+                inputStyle={styles.inputText}
+              />
+
+              <TouchableOpacity style={styles.forgotPasswordContainer}>
+                <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.loginButton}
+                onPress={handleLogin}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Se connecter</Text>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.signupContainer}>
+                <Text style={styles.signupText}>
+                  Nouveau sur Sunu Rekolt ?{' '}
+                  <Text 
+                    style={styles.signupLink}
+                    onPress={() => router.push('/(auth)/register')}
+                  >
+                    Créer un compte
+                  </Text>
+                </Text>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </ImageBackground>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral.white,
+    position: 'relative',
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    padding: 24,
+    justifyContent: 'center',
   },
-  header: {
+  logoContainer: {
     alignItems: 'center',
-    marginTop: 60,
     marginBottom: 40,
   },
-  logo: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#059669',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 16,
+  },
+  icon: {
+    width: 32,
+    height: 32,
+    resizeMode: 'contain',
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: Colors.primary.DEFAULT,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: Colors.neutral[600],
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#212121',
     textAlign: 'center',
-    marginBottom: 16,
+    fontFamily: 'BalooBhai2_600SemiBold',
   },
-  form: {
+  formContainer: {
     width: '100%',
   },
+  inputLabel: {
+    fontSize: 16,
+    color: '#424242',
+    marginBottom: 8,
+    fontFamily: 'BalooBhai2_400Regular',
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  countryCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: Colors.neutral[300],
+  },
+  countryFlag: {
+    marginRight: 8,
+    fontSize: 16,
+  },
+  countryCode: {
+    fontSize: 16,
+    color: '#212121',
+    fontFamily: 'BalooBhai2_400Regular',
+  },
+  phoneInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  passwordInput: {
+    marginBottom: 8,
+  },
+  inputText: {
+    fontFamily: 'BalooBhai2_400Regular',
+  },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginBottom: 24,
+  },
+  forgotPasswordText: {
+    color: '#059669',
+    fontSize: 14,
+    fontFamily: 'BalooBhai2_400Regular',
+  },
+  loginButton: {
+    backgroundColor: '#059669',
+    borderRadius: 8,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'BalooBhai2_400Regular',
+  },
+  signupContainer: {
+    alignItems: 'center',
+  },
+  signupText: {
+    fontSize: 14,
+    color: '#424242',
+    textAlign: 'center',
+    fontFamily: 'BalooBhai2_400Regular',
+  },
+  signupLink: {
+    color: '#059669',
+    fontWeight: '600',
+  },
   errorContainer: {
-    backgroundColor: Colors.neutral[100],
+    backgroundColor: 'rgba(255, 236, 236, 0.8)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: Colors.primary.DEFAULT,
+    borderLeftColor: Colors.error.DEFAULT,
   },
   errorText: {
-    color: Colors.primary.DEFAULT,
+    color: Colors.error.DEFAULT,
     fontSize: 14,
-    lineHeight: 20,
-  },
-  loginButton: {
-    marginTop: 8,
-  },
-  registerLink: {
-    marginTop: 24,
-    alignItems: 'center',
-  },
-  registerText: {
-    fontSize: 16,
-    color: Colors.neutral[700],
-  },
-  registerHighlight: {
-    color: Colors.primary.DEFAULT,
-    fontWeight: '600',
+    fontFamily: 'BalooBhai2_400Regular',
   },
 });

@@ -1,7 +1,7 @@
 export default {
   // Primary colors
   primary: {
-    DEFAULT: '#2E7D32', // Deep green - representing agriculture
+    DEFAULT: '#059669', // Deep green - representing agriculture
     50: '#E8F5E9',
     100: '#C8E6C9',
     200: '#A5D6A7',

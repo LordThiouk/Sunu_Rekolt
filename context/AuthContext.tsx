@@ -29,134 +29,178 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Check for active session on component mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Helper function to determine redirect path based on user role
+    const getRedirectPath = (userRole: UserRole | undefined): string => {
+      if (userRole === 'farmer') {
+        return '/(tabs)/farmer-dashboard';
+      } else if (userRole === 'buyer') {
+        return '/(tabs)/index'; // Catalogue screen for buyer
+      } else {
+        // Default for admin (handled by web) or if role is undefined briefly
+        return '/(tabs)/'; 
+      }
+    };
+
+    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
       if (isMounted.current) {
-        setSession(session);
-        if (session) {
-          fetchUserProfile(session.user.id);
+        setSession(currentSession);
+        if (currentSession) {
+          const fetchedUser = await fetchUserProfile(currentSession.user.id);
+          // Redirect based on fetched user role if already logged in
+          if (fetchedUser) {
+            const path = getRedirectPath(fetchedUser.role);
+            console.log(`[AuthContext] Role: ${fetchedUser.role}, Initial redirect to: ${path}`);
+            // Only redirect if not already on a valid path
+            if (router.canGoBack()) router.dismissAll();
+            router.replace(path as any);
+          }
+        } else {
+          // No session, ensure user is on auth screen
+           if (router.canGoBack()) router.dismissAll();
+           router.replace('/(auth)' as any);
         }
         setLoading(false);
       }
     });
 
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
       if (isMounted.current) {
-        setSession(session);
-        if (session) {
-          await fetchUserProfile(session.user.id);
-          // Redirect to tabs after successful login
-          router.replace('/(tabs)/' as any);
+        setSession(currentSession);
+        if (currentSession) {
+          const fetchedUser = await fetchUserProfile(currentSession.user.id);
+          if (fetchedUser) {
+            const path = getRedirectPath(fetchedUser.role);
+            console.log(`[AuthContext] Role: ${fetchedUser.role}, Redirecting to: ${path}`);
+            if (router.canGoBack()) router.dismissAll();
+            router.replace(path as any);
+          } else {
+            // Failed to fetch profile, redirect to a safe place like login
+            console.error('[AuthContext] Failed to fetch profile after auth change, redirecting to login.');
+            if (router.canGoBack()) router.dismissAll();
+            router.replace('/(auth)/login' as any);
+          }
         } else {
           setUser(null);
-          // Redirect to login when session is lost
-          router.replace('/(auth)/login' as any);
+          console.log('[AuthContext] No session, redirecting to auth.');
+          if (router.canGoBack()) router.dismissAll();
+          router.replace('/(auth)' as any); // Go to welcome/auth index
         }
         setLoading(false);
       }
     });
 
-    // Cleanup subscription
     return () => {
       subscription.unsubscribe();
-      isMounted.current = false;
     };
   }, []);
 
-  async function fetchUserProfile(userId: string) {
+  async function fetchUserProfile(userId: string): Promise<User | null> {
     try {
-      const { data, error } = await supabase
+      setLoading(true); // Added to indicate profile fetching activity
+      const { data, error, status } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) {
+      if (error && status !== 406) { // 406 means no rows found, which is okay if profile is being created
+        console.error('[AuthContext] fetchUserProfile supabase error:', error);
         throw error;
       }
 
       if (data && isMounted.current) {
         console.log('[AuthContext] fetchUserProfile: Fetched profile data:', JSON.stringify(data, null, 2));
         setUser(data as User);
-        // Log the role specifically after setting user state
-        // Use a slight delay to ensure state update might have propagated if needed
-        setTimeout(() => {
-           console.log(`[AuthContext] fetchUserProfile: User state SHOULD now have role: ${user?.role}`);
-        }, 0);
+        return data as User;
+      } else {
+        console.warn('[AuthContext] fetchUserProfile: No data returned or component unmounted');
+        return null;
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('[AuthContext] Error fetching user profile:', error);
+      setUser(null); // Clear user on error
+      return null;
+    } finally {
+      if (isMounted.current) setLoading(false);
     }
   }
 
   const signIn = async (phone: string, password: string) => {
+    setLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         phone,
         password,
       });
-
-      if (!error && data.session) {
-        // Session will be handled by the auth state change listener
-        return { error: null };
-      }
-
+      // onAuthStateChange will handle session and profile fetching
       return { error };
     } catch (error) {
       return { error: error as Error };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signUp = async (phone: string, password: string, role: UserRole, name: string, location?: string, farmSize?: number) => {
+    setLoading(true);
     try {
-      const { data: { user }, error } = await supabase.auth.signUp({
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
         phone,
         password,
       });
 
-      if (error) throw error;
+      if (signUpError) throw signUpError;
 
-      if (user) {
-        // Create user profile
+      if (authData.user) {
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
             {
-              id: user.id,
+              id: authData.user.id,
               phone,
               role,
               name,
               location,
               farm_size: farmSize,
-              created_at: new Date(),
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(), // Ensure updated_at is also set
             },
-          ]);
+          ])
+          .select(); // Important to select to confirm insert and potentially get back data
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('[AuthContext] Error creating profile:', profileError);
+          // Potentially delete the auth user if profile creation fails
+          // await supabase.auth.deleteUser(authData.user.id); // Be cautious with this
+          throw profileError;
+        }
+        // At this point, onAuthStateChange should trigger, fetch the new profile, and redirect.
+        // No explicit redirect here to avoid race conditions with onAuthStateChange.
       }
-
       return { error: null };
     } catch (error) {
       return { error: error as Error };
+    } finally {
+      setLoading(false);
     }
   };
 
   const signOut = async () => {
+    setLoading(true);
     try {
       await supabase.auth.signOut();
-      // Redirection will be handled by the auth state change listener
+      // onAuthStateChange will handle redirection to auth screens
     } catch (error) {
       console.error('Error signing out:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   const updateUser = (updates: Partial<User>) => {
     if (isMounted.current) {
         setUser(prevUser => {
-            if (!prevUser) return null; // Should not happen if called correctly
-            // Ensure updates use correct keys if necessary (e.g., farm_size vs farmSize)
-            // Here we assume updates uses the keys from the User type (camelCase)
+            if (!prevUser) return null;
             const updatedUser = { ...prevUser, ...updates };
             console.log('[AuthContext] updateUser: Updating user state:', JSON.stringify(updatedUser, null, 2));
             return updatedUser;

@@ -1,126 +1,13 @@
-import { Tabs } from 'expo-router';
+import React from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { useCart } from '@/context/CartContext';
-import { Text, View, StyleSheet } from 'react-native';
+import { useAuth } from '@/context/AuthContext';
+import { Text, View, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { useNotifications } from '@/hooks/useNotifications';
 
-export default function TabLayout() {
-  const { count } = useCart();
-
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors.primary.DEFAULT,
-        tabBarInactiveTintColor: Colors.neutral[500],
-        tabBarStyle: {
-          backgroundColor: Colors.neutral.white,
-          borderTopColor: Colors.neutral[200],
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
-        },
-        headerStyle: {
-          backgroundColor: Colors.primary.DEFAULT,
-        },
-        headerTintColor: Colors.neutral.white,
-        headerTitleStyle: {
-          fontWeight: '600',
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Catalogue',
-          tabBarLabel: 'Catalogue',
-          tabBarIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="shop"
-        options={{
-          title: 'Boutique',
-          tabBarLabel: 'Boutique',
-          tabBarIcon: ({ color, size }) => <Feather name="shopping-bag" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="cart"
-        options={{
-          title: 'Panier',
-          tabBarLabel: 'Panier',
-          tabBarIcon: ({ color, size }) => (
-            <View>
-              <Feather name="shopping-cart" size={size} color={color} />
-              {count > 0 && (
-                <View style={styles.badgeContainer}>
-                  <Text style={styles.badgeText}>
-                    {count > 99 ? '99+' : count}
-                  </Text>
-                </View>
-              )}
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profil',
-          tabBarLabel: 'Profil',
-          tabBarIcon: ({ color, size }) => <Feather name="user" size={size} color={color} />,
-        }}
-      />
-      
-      {/* Hidden screens */}
-      <Tabs.Screen
-        name="catalog/[id]"
-        options={{
-          href: null,
-          headerShown: true,
-          title: 'Détail Produit',
-        }}
-      />
-      <Tabs.Screen
-        name="product/add"
-        options={{
-          href: null,
-          headerShown: true,
-          title: 'Ajouter Produit',
-        }}
-      />
-      <Tabs.Screen
-        name="payment"
-        options={{
-          href: null,
-          headerShown: true,
-          title: 'Paiement',
-        }}
-      />
-      <Tabs.Screen
-        name="order-confirmation"
-        options={{
-          href: null,
-          headerShown: true,
-          title: 'Confirmation de commande',
-        }}
-      />
-      {/* Explicitly hide farmer detail screen/directory */}
-      <Tabs.Screen
-        name="farmer-order-detail/[id]" // Target the dynamic file route
-        options={{
-          href: null, // Hide from tab bar
-          headerShown: false, // Keep header management within the screen itself
-        }}
-      />
-    </Tabs>
-  );
-}
-
+// Header styling
 const styles = StyleSheet.create({
   badgeContainer: {
     position: 'absolute',
@@ -138,6 +25,205 @@ const styles = StyleSheet.create({
   badgeText: {
     color: Colors.neutral.white,
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'BalooBhai2_600SemiBold',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 16,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontFamily: 'BalooBhai2_600SemiBold',
+    color: Colors.neutral.white,
+  },
+  iconWrapper: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    backgroundColor: Colors.error.DEFAULT,
+    borderRadius: 10,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  notificationBadgeText: {
+    color: Colors.neutral.white,
+    fontSize: 8,
+    fontFamily: 'BalooBhai2_600SemiBold',
   },
 });
+
+export default function TabLayout() {
+  const { count } = useCart();
+  const { user } = useAuth();
+  const router = useRouter();
+  const { unreadCount } = useNotifications();
+
+  // Handle notification icon press
+  const handleNotificationPress = () => {
+    router.push('/notifications');
+  };
+
+  // Header options that will be applied to all screens
+  const commonHeaderOptions = {
+    headerTitle: () => (
+      <View style={styles.headerContainer}>
+        <View style={styles.headerLeft}>
+          <Image 
+            source={require('@/assets/images/icon-white-svg.png')} 
+            style={{ width: 24, height: 24, marginRight: 8 }} 
+          />
+          <Text style={styles.headerTitle}>Sunu Rekolt</Text>
+        </View>
+        <TouchableOpacity onPress={handleNotificationPress}>
+          <View style={styles.iconWrapper}>
+            <Feather name="bell" size={18} color="#fff" />
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </View>
+    ),
+    headerTitleAlign: 'center' as const,
+    headerStyle: {
+      backgroundColor: Colors.primary.DEFAULT,
+    },
+    headerTintColor: Colors.neutral.white,
+  };
+
+  // Only render if user is authenticated
+  if (!user) {
+    return null;
+  }
+
+  if (user.role === 'farmer') {
+    return (
+      <Tabs
+        screenOptions={{
+          ...commonHeaderOptions,
+          tabBarActiveTintColor: Colors.primary.DEFAULT,
+        }}
+      >
+        <Tabs.Screen
+          name="farmer-dashboard"
+          options={{
+            tabBarLabel: 'Accueil',
+            tabBarIcon: ({ color }) => <Feather name="home" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="my-products"
+          options={{
+            tabBarLabel: 'Produits',
+            tabBarIcon: ({ color }) => <Feather name="package" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="index"
+          options={{
+            tabBarLabel: 'Catalogue',
+            tabBarIcon: ({ color }) => <Feather name="grid" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            tabBarLabel: 'Profil',
+            tabBarIcon: ({ color }) => <Feather name="user" size={24} color={color} />,
+          }}
+        />
+
+        {/* Hidden routes - not shown in tabs but available for navigation */}
+        <Tabs.Screen name="catalog/[id]" options={{ href: null }} />
+        <Tabs.Screen name="product/add" options={{ href: null }} />
+        <Tabs.Screen name="payment" options={{ href: null }} />
+        <Tabs.Screen name="order-confirmation" options={{ href: null }} />
+        <Tabs.Screen name="farmer-order-detail/[id]" options={{ href: null }} />
+        <Tabs.Screen name="edit-profile" options={{ href: null }} />
+        <Tabs.Screen name="farmer-orders" options={{ href: null }} />
+        <Tabs.Screen name="shop" options={{ href: null }} />
+        <Tabs.Screen name="cart" options={{ href: null }} />
+      </Tabs>
+    );
+  }
+
+  return (
+    <Tabs
+      screenOptions={{
+        ...commonHeaderOptions,
+        tabBarActiveTintColor: Colors.primary.DEFAULT,
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          tabBarLabel: 'Catalogue',
+          tabBarIcon: ({ color }) => <Feather name="grid" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="farmer-orders" // Using farmer-orders as orders screen for buyers too
+        options={{
+          tabBarLabel: 'Commandes',
+          tabBarIcon: ({ color }) => <Feather name="shopping-bag" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="cart"
+        options={{
+          tabBarLabel: 'Panier',
+          tabBarIcon: ({ color }) => (
+            <View>
+              <Feather name="shopping-cart" size={24} color={color} />
+              {count > 0 && (
+                <View style={styles.badgeContainer}>
+                  <Text style={styles.badgeText}>{count}</Text>
+                </View>
+              )}
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          tabBarLabel: 'Profil',
+          tabBarIcon: ({ color }) => <Feather name="user" size={24} color={color} />,
+        }}
+      />
+
+      {/* Hidden routes - not shown in tabs but available for navigation */}
+      <Tabs.Screen name="catalog/[id]" options={{ href: null }} />
+      <Tabs.Screen name="product/add" options={{ href: null }} />
+      <Tabs.Screen name="payment" options={{ href: null }} />
+      <Tabs.Screen name="order-confirmation" options={{ href: null }} />
+      <Tabs.Screen name="farmer-order-detail/[id]" options={{ href: null }} />
+      <Tabs.Screen name="edit-profile" options={{ href: null }} />
+      <Tabs.Screen name="my-products" options={{ href: null }} />
+      <Tabs.Screen name="shop" options={{ href: null }} />
+      <Tabs.Screen name="farmer-dashboard" options={{ href: null }} />
+    </Tabs>
+  );
+}
