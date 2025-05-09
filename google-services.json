@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "668792280893",
+    "project_id": "sunurekolt",
+    "storage_bucket": "sunurekolt.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:668792280893:android:f0c95585f2f39e96e15754",
+        "android_client_info": {
+          "package_name": "com.lordthiouk.sunurekolt"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB4ysZzBnrdNVCJLFK3iGJmwBHJcdzybaU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

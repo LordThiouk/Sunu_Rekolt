@@ -3,26 +3,25 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { Stack, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
-import { useNotifications } from '@/hooks/useNotifications';
-import { Notification } from '@/lib/api/notifications';
+import { useNotifications } from '@/context/NotificationContext';
+import { UserAlert as Notification } from '@/context/NotificationContext';
 import { useAuth } from '@/context/AuthContext';
 
 export default function NotificationsScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
+  const [markingAllAsReadState, setMarkingAllAsReadState] = useState(false);
   const { 
     notifications, 
     loading, 
-    loadNotifications, 
-    markNotificationAsRead,
-    markAllNotificationsAsRead,
+    markAsRead,
+    markAllAsRead,
     unreadCount
   } = useNotifications();
 
   useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+    // loadNotifications(); // Context should handle initial loading
+  }, []);
 
   // Handle notification press
   const handleNotificationPress = (notification: Notification) => {
@@ -30,7 +29,7 @@ export default function NotificationsScreen() {
     // console.log('Notification Object:', JSON.stringify(notification, null, 2)); 
 
     if (!notification.is_read) {
-      markNotificationAsRead(notification.id);
+      markAsRead(notification.id);
     }
     
     const mainType = notification.type; // This will be 'new_order', 'product_approved_farmer', etc.
@@ -42,7 +41,7 @@ export default function NotificationsScreen() {
 
     switch (mainType) {
       case 'new_order': 
-        entityId = notification.related_order_id; 
+        entityId = notification.related_entity_id;
         // console.log('Case: "new_order" matched. Order ID:', entityId);
         if (entityId) { 
           if (user && user.role === 'farmer') {
@@ -66,7 +65,7 @@ export default function NotificationsScreen() {
         break;
       
       case 'product_approved_farmer': 
-        entityId = notification.related_product_id;
+        entityId = notification.related_entity_id;
         if (entityId) {
           pathToNavigate = `/(tabs)/catalog/${entityId}`;
           // console.log('Path set to (product detail): ', pathToNavigate);
@@ -81,7 +80,7 @@ export default function NotificationsScreen() {
       case 'order_delivering':
       case 'order_delivered':
       case 'please_review_order': 
-        entityId = notification.related_order_id;
+        entityId = notification.related_entity_id;
         if (entityId && user && user.role === 'buyer') {
           // TODO: Replace `/(tabs)/order-detail/` with the actual path for buyer order details
           pathToNavigate = `/(tabs)/order-detail/${entityId}`;
@@ -98,7 +97,7 @@ export default function NotificationsScreen() {
         break;
         
       case 'payment_received': // Typically for Farmer
-        entityId = notification.related_order_id;
+        entityId = notification.related_entity_id;
         if (entityId && user && user.role === 'farmer') {
           pathToNavigate = `/(tabs)/farmer-order-detail/${entityId}`;
           // console.log(`Farmer, payment_received for order ${entityId}, Path: ${pathToNavigate}`);
@@ -133,30 +132,23 @@ export default function NotificationsScreen() {
   // Handle mark all as read
   const handleMarkAllAsRead = async () => {
     try {
-      setMarkingAllAsRead(true);
-      const success = await markAllNotificationsAsRead();
+      setMarkingAllAsReadState(true);
+      await markAllAsRead();
       
-      if (success) {
-        // Show success toast or message if desired
-      } else {
-        Alert.alert(
-          "Erreur",
-          "Impossible de marquer toutes les notifications comme lues. Veuillez réessayer."
-        );
-      }
+      // No explicit success/error handling here if context handles it or no feedback needed
     } catch (error) {
-      console.error('Error marking all as read:', error);
+      console.error('Error marking all as read on screen:', error);
       Alert.alert(
         "Erreur",
-        "Une erreur s'est produite. Veuillez réessayer."
+        "Une erreur s'est produite en marquant tout comme lu. Veuillez réessayer."
       );
     } finally {
-      setMarkingAllAsRead(false);
+      setMarkingAllAsReadState(false);
     }
   };
 
   // Function to get icon based on notification type
-  const getNotificationIcon = (type: Notification['type'], importance: Notification['importance']) => {
+  const getNotificationIcon = (type: Notification['type'], importance: Notification['importance_level']) => {
     let iconName = 'bell';
     let iconColor = Colors.primary.DEFAULT;
     
@@ -187,7 +179,7 @@ export default function NotificationsScreen() {
 
   // Render a notification item
   const renderNotification = ({ item }: { item: Notification }) => {
-    const { iconName, iconColor } = getNotificationIcon(item.type, item.importance);
+    const { iconName, iconColor } = getNotificationIcon(item.type, item.importance_level);
     const date = new Date(item.created_at).toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: 'short',
@@ -225,9 +217,9 @@ export default function NotificationsScreen() {
         <TouchableOpacity 
           style={styles.markAllButton}
           onPress={handleMarkAllAsRead}
-          disabled={markingAllAsRead}
+          disabled={markingAllAsReadState}
         >
-          {markingAllAsRead ? (
+          {markingAllAsReadState ? (
             <ActivityIndicator size="small" color={Colors.primary.DEFAULT} />
           ) : (
             <>
@@ -263,7 +255,7 @@ export default function NotificationsScreen() {
         }}
       />
       <View style={styles.container}>
-        {loading && !markingAllAsRead ? (
+        {loading && !markingAllAsReadState ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.primary.DEFAULT} />
           </View>
@@ -275,8 +267,6 @@ export default function NotificationsScreen() {
             contentContainerStyle={styles.listContainer}
             ListHeaderComponent={renderHeader}
             ListEmptyComponent={renderEmptyComponent}
-            onRefresh={loadNotifications}
-            refreshing={loading}
           />
         )}
       </View>

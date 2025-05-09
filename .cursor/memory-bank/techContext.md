@@ -75,3 +75,33 @@
 *   **Styling Inconsistency:** Mixed use of StyleSheet.create and TailwindCSS/NativeWind classes causing application issues. Potential need to standardize on one approach.
 
 ### Local Development 
+
+## Backend Technologies
+
+*   **Supabase Edge Functions:**
+    *   Runtime: Deno
+    *   Language: TypeScript
+    *   Usage: For server-side logic like sending push notifications (`send-expo-push-notification`).
+    *   Deployment: Via Supabase CLI (`supabase functions deploy`), requires Docker Desktop locally for bundling.
+    *   Environment Variables/Secrets: Managed via `supabase secrets set` for deployed functions. Local development can use `.env` files in the function's directory or root `supabase` folder.
+    *   Authentication: Can be protected by JWT (`verify_jwt = true` in `config.toml`).
+*   **PostgreSQL (Supabase Database):**
+    *   **Triggers and Functions:** `plpgsql` functions executed by database triggers (e.g., `AFTER INSERT ON user_alerts`).
+    *   **`pg_net` Extension:** Used by `plpgsql` functions to make outbound HTTP requests (e.g., to call Edge Functions). Must be enabled in the Supabase project.
+    *   **Configuration Variables (GUCs):** PostgreSQL server configuration variables (e.g., `app_settings.supabase_service_key`) can be set using `ALTER DATABASE postgres SET var_name = 'value';` and read by database functions using `current_setting('var_name', true)`. Used for storing secrets like the service role key for use by triggers.
+*   **Supabase CLI:**
+    *   Used for local development, database migrations (`supabase db push`), Edge Function deployment (`supabase functions deploy`), managing secrets (`supabase secrets set`), etc.
+    *   Relies on a correctly formatted project root `.env` file for some configurations.
+    *   Requires Docker Desktop for bundling and deploying Edge Functions locally.
+
+## Frontend Technologies
+
+*   **Expo Push Notifications:**
+    *   Libraries: `expo-notifications`, `expo-device`, `@react-native-async-storage/async-storage`.
+    *   Process: Request permissions, get Expo Push Token, send token to backend (stored in `profiles.expo_push_token`), handle foreground notifications, handle notification responses (taps for deep-linking).
+*   **Supabase Realtime:**
+    *   Used for live updates within the app, e.g., subscribing to `INSERT` events on the `user_alerts` table to update in-app notification lists and unread counts. Implemented in `NotificationContext.tsx`.
+
+## Development Environment
+*   **Docker Desktop:** Required for local Supabase Edge Function development and deployment via the CLI.
+*   **VS Code with Deno Extension (`denoland.vscode-deno`):** Recommended for developing Edge Functions to get proper Deno type checking and language server features. May require workspace initialization for Deno support (`Deno: Initialize Workspace Configuration`). 

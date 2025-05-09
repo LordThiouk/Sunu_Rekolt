@@ -5,7 +5,8 @@ import Colors from '@/constants/Colors';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { Text, View, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useNotifications } from '@/context/NotificationContext';
+import { Href } from 'expo-router';
 
 // Header styling
 const styles = StyleSheet.create({
@@ -78,7 +79,7 @@ export default function TabLayout() {
 
   // Handle notification icon press
   const handleNotificationPress = () => {
-    router.push('/notifications');
+    router.push('/(tabs)/notifications' as Href);
   };
 
   // Header options that will be applied to all screens
@@ -154,8 +155,7 @@ export default function TabLayout() {
             tabBarIcon: ({ color }) => <Feather name="user" size={24} color={color} />,
           }}
         />
-
-        {/* Hidden routes - not shown in tabs but available for navigation */}
+        <Tabs.Screen name="notifications" options={{ href: null }} />
         <Tabs.Screen name="catalog/[id]" options={{ href: null }} />
         <Tabs.Screen name="product/add" options={{ href: null }} />
         <Tabs.Screen name="payment" options={{ href: null }} />
@@ -165,6 +165,8 @@ export default function TabLayout() {
         <Tabs.Screen name="farmer-orders" options={{ href: null }} />
         <Tabs.Screen name="shop" options={{ href: null }} />
         <Tabs.Screen name="cart" options={{ href: null }} />
+        <Tabs.Screen name="checkout" options={{ href: null }} />
+        <Tabs.Screen name="product-detail" options={{ href: null }} />
       </Tabs>
     );
   }
@@ -184,7 +186,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="farmer-orders" // Using farmer-orders as orders screen for buyers too
+        name="farmer-orders"
         options={{
           tabBarLabel: 'Commandes',
           tabBarIcon: ({ color }) => <Feather name="shopping-bag" size={24} color={color} />,
@@ -213,8 +215,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Feather name="user" size={24} color={color} />,
         }}
       />
-
-      {/* Hidden routes - not shown in tabs but available for navigation */}
+      <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="catalog/[id]" options={{ href: null }} />
       <Tabs.Screen name="product/add" options={{ href: null }} />
       <Tabs.Screen name="payment" options={{ href: null }} />
@@ -224,6 +225,8 @@ export default function TabLayout() {
       <Tabs.Screen name="my-products" options={{ href: null }} />
       <Tabs.Screen name="shop" options={{ href: null }} />
       <Tabs.Screen name="farmer-dashboard" options={{ href: null }} />
+      <Tabs.Screen name="checkout" options={{ href: null }} />
+      <Tabs.Screen name="product-detail" options={{ href: null }} />
     </Tabs>
   );
 }

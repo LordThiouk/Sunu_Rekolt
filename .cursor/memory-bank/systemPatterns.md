@@ -164,3 +164,57 @@ Supabase RLS policies control data access based on user roles and ownership:
 
 #### order_items
 - **INSERT**: Policy "Prevent ordering own products" checks that `(SELECT p.farmer_id FROM public.products p WHERE p.id = product_id) <> auth.uid()`. This prevents a user from adding a product to an order if they are the farmer who listed that product. 
+
+## Navigation Patterns
+
+*   **Expo Router:** File-based routing is used via `expo-router`.
+    *   Layouts are defined in `_layout.tsx` files within route groups (e.g., `app/(auth)/_layout.tsx`, `app/(tabs)/_layout.tsx`).
+    *   Screens are individual `.tsx` files or `index.tsx` within a directory for the default screen of that route.
+*   **Role-Based Redirection and Tab Layout:**
+    *   **Redirection:** `context/AuthContext.tsx` handles redirection after login. Based on the `user.role`:
+        *   Farmers are redirected to `/(tabs)/farmer-dashboard`.
+        *   Buyers are redirected to `/(tabs)/` (which typically loads `index.tsx` or the first defined tab like Catalogue).
+    *   **Conditional Tabs:** `app/(tabs)/_layout.tsx` conditionally renders different sets of tabs based on `user.role` fetched from `AuthContext`.
+        *   **Farmer Tabs:** Dashboard, Mes Produits, Catalogue, Profil.
+        *   **Buyer Tabs:** (Example: Catalogue, Panier, Commandes, Profil - to be confirmed/refined as buyer section is built out).
+    *   This pattern centralizes role-specific navigation logic, keeping individual screen components focused on their content.
+
+## State Management
+
+*   **React Context API:** Used for global state management in `AuthContext` and `CartContext`.
+*   **Manual Context Update:** `updateUser` method in `AuthContext` for manual profile updates.
+*   **Conditional Rendering:** Based on user role, different sets of tabs are rendered in `app/(tabs)/_layout.tsx`.
+*   **Role-Based Redirection:** After login, users are redirected to appropriate dashboard based on their role.
+
+## Backend Push Notification Flow (Server-Triggered)
+
+This pattern describes how a new important event in the database triggers a push notification to a user via an Expo Push Notification service.
+
+1.  **Event Creation:** An event occurs that needs to notify a user (e.g., new order for a farmer, critical system alert). This results in a new row being inserted into the `public.user_alerts` table with relevant details (`user_id`, `title`, `message`, `data`, `importance_level`, etc.).
+2.  **Database Trigger Activation:**
+    *   An `AFTER INSERT ON public.user_alerts FOR EACH ROW` trigger named `on_new_user_alert_send_push_row` is activated.
+    *   This trigger executes the `plpgsql` function `public.trigger_send_push_notification_for_row()`.
+3.  **Trigger Function Logic (`trigger_send_push_notification_for_row`):**
+    *   Checks if the `NEW.importance_level` is 'high' or 'critical' and `NEW.is_read` is `FALSE`.
+    *   Constructs a JSON payload containing `user_id`, `title`, `message`, and `data` from the `NEW` alert record.
+    *   Retrieves the Supabase Service Role Key by reading a PostgreSQL configuration variable (`current_setting('app_settings.supabase_service_key', true)`). **This variable must be pre-set by an administrator directly in the database.**
+    *   Constructs the URL for the `send-expo-push-notification` Edge Function (e.g., `https://<project_ref>.supabase.co/functions/v1/send-expo-push-notification`).
+    *   Uses the `pg_net` PostgreSQL extension to make an HTTP POST request to the Edge Function URL.
+    *   The request includes the JSON payload and an `Authorization: Bearer <SERVICE_ROLE_KEY>` header.
+    *   Includes basic error handling to log issues with the HTTP call without failing the original database transaction.
+4.  **Edge Function Execution (`send-expo-push-notification`):**
+    *   The Deno-based Edge Function receives the HTTP POST request.
+    *   It parses the JSON payload (`user_id`, `title`, `message`, `data`).
+    *   It initializes a Supabase client using its own environment variables (`EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY`) set via `supabase secrets set`. This client is used to query the database.
+    *   It queries the `public.profiles` table to fetch the `expo_push_token` for the given `user_id`.
+    *   If a token is found, it constructs a message object for the Expo Push API (`https://exp.host/--/api/v2/push/send`), including the `to` (token), `title`, `body` (message), and `data` fields.
+    *   It makes an HTTP POST request to the Expo Push API.
+    *   It logs the response from Expo and handles potential errors, such as "DeviceNotRegistered" (optionally clearing the invalid token from `profiles`).
+5.  **Push Notification Delivery:**
+    *   Expo's Push API attempts to deliver the notification to the user's device via APNS (Apple) or FCM (Google).
+    *   The frontend app, upon receiving the push notification (while in foreground, background, or killed state), handles it according to its setup (displaying, navigating on tap via the `data` payload).
+
+**Security Considerations:**
+*   The Service Role Key used by the database trigger must be managed securely (e.g., via PostgreSQL configuration variables set by an admin, not hardcoded).
+*   The Edge Function itself is JWT-protected (`verify_jwt = true` in `config.toml`), and the database trigger provides the Service Role Key as the Bearer token.
+*   The Edge Function uses its own Service Role Key (via `supabase secrets set`) for its internal Supabase client to query `expo_push_token`.

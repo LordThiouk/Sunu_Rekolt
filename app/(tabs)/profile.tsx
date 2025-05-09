@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert, // Keep Alert for placeholders
   ActivityIndicator, // Keep for loading state
+  Platform, // Added Platform for styles
 } from 'react-native';
 import { Image } from 'expo-image'; // Use expo-image
 import { useRouter } from 'expo-router';
@@ -16,14 +17,195 @@ import Colors from '@/constants/Colors';
 import { User } from '@/types'; // Import User type
 // Button component is no longer needed directly here unless for another purpose
 
+// Define platform-specific values before StyleSheet.create
+// const headerPaddingTop = Platform.OS === 'android' ? 40 : 20; // Temporarily commented out
+
+// Define styles before the component uses them
+const styles = StyleSheet.create({
+  container_simplified: {
+    flex: 1,
+    backgroundColor: Colors.neutral[50],
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  userName_simplified: {
+    fontSize: 20,
+    fontFamily: 'BalooBhai2_600SemiBold',
+    color: Colors.neutral[900],
+    marginBottom: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.neutral[50],
+  },
+  errorText: {
+    fontSize: 16,
+    color: Colors.error.DEFAULT,
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: 'BalooBhai2_400Regular',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.neutral[50], 
+  },
+  scrollContent: {
+    paddingBottom: 40, 
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 40, // Temporarily hardcoded for Android diagnostic
+    paddingBottom: 15,
+    backgroundColor: Colors.neutral.white,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[200],
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontFamily: 'BalooBhai2_600SemiBold',
+    color: Colors.neutral[900],
+  },
+  userInfoSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    backgroundColor: Colors.neutral.white,
+    marginHorizontal: 15,
+    borderRadius: 10,
+    marginTop: 20,
+    elevation: 2, // Android shadow
+    shadowColor: '#000', // iOS shadow
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 15,
+    backgroundColor: Colors.neutral[200], // Placeholder bg
+  },
+  userName: {
+    fontSize: 20,
+    fontFamily: 'BalooBhai2_600SemiBold',
+    color: Colors.neutral[900],
+    marginBottom: 8,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 15, // Padding within the user info box for rows
+  },
+  infoIcon: {
+    marginRight: 10,
+  },
+  infoText: {
+    fontSize: 15,
+    fontFamily: 'BalooBhai2_400Regular',
+    color: Colors.neutral[700],
+  },
+  bioRow: {
+    // For potential specific styling for bio if needed
+    paddingVertical: 5,
+  },
+  bioText: {
+    flexShrink: 1, // Allow bio text to shrink if needed
+    lineHeight: 20, 
+  },
+  fieldPictureSection: {
+    marginTop: 15,
+    paddingHorizontal: 15,
+    width: '100%', // Take full width of the userInfoSection
+    alignItems: 'center',
+  },
+  fieldPictureHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    alignSelf: 'flex-start', // Align header to the left
+  },
+  fieldPictureLabel: {
+    fontSize: 15,
+    fontFamily: 'BalooBhai2_500Medium',
+    color: Colors.neutral[900],
+    marginLeft: 5, // Space after icon
+  },
+  fieldPicture: {
+    width: '90%', // Relative to parent
+    aspectRatio: 16 / 9,
+    borderRadius: 8,
+    backgroundColor: Colors.neutral[200],
+    alignSelf: 'center', 
+  },
+  actionList: {
+    marginTop: 25,
+    marginHorizontal: 15,
+    backgroundColor: Colors.neutral.white,
+    borderRadius: 10,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 1,
+    overflow: 'hidden', // Ensures border radius is respected by TouchableOpacity ripples
+  },
+  actionRowStyle: { // Renamed to avoid conflict if ActionRow component has its own style prop named 'actionRow'
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.neutral[100],
+  },
+  actionIconBackground: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primary[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  actionLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'BalooBhai2_400Regular',
+    color: Colors.neutral[900],
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 15,
+    marginHorizontal: 15,
+    backgroundColor: Colors.error.light,
+    borderRadius: 8,
+    marginTop: 30,
+  },
+  signOutText: {
+    fontSize: 16,
+    fontFamily: 'BalooBhai2_500Medium',
+    color: Colors.error.DEFAULT,
+    marginLeft: 10,
+  },
+});
+
 // Define the ActionRow component inline or keep if already defined elsewhere
 interface ActionRowProps {
   iconName: keyof typeof Feather.glyphMap; // Use Feather icon names
   label: string;
   onPress: () => void;
 }
+// Use styles.actionRowStyle for the ActionRow component to avoid naming confusion
 const ActionRow: React.FC<ActionRowProps> = ({ iconName, label, onPress }) => (
-  <TouchableOpacity style={styles.actionRow} onPress={onPress} activeOpacity={0.7}>
+  <TouchableOpacity style={styles.actionRowStyle} onPress={onPress} activeOpacity={0.7}>
     <View style={styles.actionIconBackground}>
       <Feather name={iconName} size={20} color={Colors.primary.DEFAULT} /> {/* Use Feather */}
     </View>
@@ -46,57 +228,56 @@ export default function ProfileScreen() {
   const { user, signOut, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const handleEditProfile = () => {
-    router.push('/(tabs)/edit-profile');
-  };
+  console.log('[ProfileScreen] Auth Loading:', authLoading, 'User:', user ? user.id : 'No User');
 
-  const handleOrderHistory = () => {
-    // TODO: Navigate to a dedicated order history screen
-    // For now, placeholder:
-    // router.push('/(tabs)/order-history'); // Create this file later
-     Alert.alert("Historique", "Navigation vers l'historique des commandes (à implémenter).");
-  };
-
-  const handleNotifications = () => {
-    Alert.alert("Notifications", "Fonctionnalité à implémenter.");
-  };
-
-  const handlePrivacy = () => {
-    Alert.alert("Confidentialité", "Navigation vers les paramètres de confidentialité (à implémenter).");
-  };
-
-   const handleSettings = () => {
-     Alert.alert("Paramètres", "Navigation vers les paramètres généraux (à implémenter).");
-  };
-
-  const handleSignOut = () => {
-    signOut();
-  };
-
-  if (authLoading || !user) {
+  if (authLoading) { // Only check authLoading initially
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary.DEFAULT} />
+        <Text>Loading profile...</Text>
       </View>
     );
   }
 
+  if (!user) { // After loading, if no user, show a message
+    return (
+      <View style={styles.loadingContainer}> 
+        <Text style={styles.errorText}>Utilisateur non trouvé. Veuillez vous reconnecter.</Text>
+        <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
+            <Feather name="log-out" size={20} color={Colors.error.DEFAULT} />
+            <Text style={styles.signOutText}>Se déconnecter</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Simplified render for testing
+  return (
+    <View style={styles.container_simplified}>
+      <Text style={styles.userName_simplified}>Profil de: {user.name || 'Utilisateur'}</Text>
+      <Text>ID: {user.id}</Text>
+      <Text>Role: {translateRole(user.role)}</Text>
+      <TouchableOpacity style={styles.signOutButton} onPress={signOut}>
+        <Feather name="log-out" size={20} color={Colors.error.DEFAULT} />
+        <Text style={styles.signOutText}>Se déconnecter</Text>
+      </TouchableOpacity>
+       {((): null => { console.log(`[ProfileScreen Render Log - Simplified] User: ${user?.name}`); return null; })()}
+    </View>
+  );
+
+  /* Original Content Commented Out
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-       {/* ---- ADD RENDER LOG ---- */}
        {((): null => { console.log(`[ProfileScreen Render Log] AvatarURL: ${user?.avatarUrl}, FieldPicURL: ${user?.fieldPictureUrl}`); return null; })()}
        
-       {/* Header */}
        <View style={styles.header}>
            <Text style={styles.headerTitle}>Mon Profil</Text>
            <TouchableOpacity onPress={handleSettings}>
-               <Feather name="settings" size={24} color={Colors.neutral[600]} /> {/* Feather */}
+               <Feather name="settings" size={24} color={Colors.neutral[600]} /> 
            </TouchableOpacity>
        </View>
 
-       {/* User Info */}
        <View style={styles.userInfoSection}>
-            {/* Conditionally render Image based on context user.avatarUrl */}
             {user.avatarUrl ? (
                 <Image
                     key={user.avatarUrl}
@@ -107,7 +288,6 @@ export default function ProfileScreen() {
                     onError={(error) => console.error('Avatar Image Load Error:', error.error)}
                 />
             ) : (
-                 // Show placeholder if no avatarUrl
                  <Image
                      key="placeholder-avatar"
                      style={styles.avatar}
@@ -117,37 +297,31 @@ export default function ProfileScreen() {
             )}
             <Text style={styles.userName}>{user.name || 'Utilisateur'}</Text>
 
-            {/* Phone */}
             <View style={styles.infoRow}>
-                 <Feather name="phone" size={16} color={Colors.neutral[500]} style={styles.infoIcon} /> {/* Feather */}
+                 <Feather name="phone" size={16} color={Colors.neutral[500]} style={styles.infoIcon} /> 
                  <Text style={styles.infoText}>{user.phone}</Text>
             </View>
 
-            {/* Role */}
             <View style={styles.infoRow}>
-                <Feather name="briefcase" size={16} color={Colors.neutral[500]} style={styles.infoIcon} /> {/* Feather */}
+                <Feather name="briefcase" size={16} color={Colors.neutral[500]} style={styles.infoIcon} />
                 <Text style={styles.infoText}>{translateRole(user.role)}</Text>
            </View>
 
-            {/* Location (Conditional) */}
             {user.location && (
                 <View style={styles.infoRow}>
-                    <Feather name="map-pin" size={16} color={Colors.neutral[500]} style={styles.infoIcon} /> {/* Feather */}
+                    <Feather name="map-pin" size={16} color={Colors.neutral[500]} style={styles.infoIcon} />
                     <Text style={styles.infoText}>{user.location}</Text>
                 </View>
             )}
 
-            {/* Bio (Conditional for Farmer) */}
             {user.role === 'farmer' && user.bio && (
-                 <View style={[styles.infoRow, styles.bioRow]}> {/* Add optional specific style */}
-                     <Feather name="file-text" size={16} color={Colors.neutral[500]} style={styles.infoIcon} /> {/* Feather - file-text for Bio */}
-                     <Text style={[styles.infoText, styles.bioText]} numberOfLines={3} ellipsizeMode="tail">{user.bio}</Text> {/* Limit lines */}
+                 <View style={[styles.infoRow, styles.bioRow]}> 
+                     <Feather name="file-text" size={16} color={Colors.neutral[500]} style={styles.infoIcon} /> 
+                     <Text style={[styles.infoText, styles.bioText]} numberOfLines={3} ellipsizeMode="tail">{user.bio}</Text> 
                  </View>
             )}
 
-            {/* Field Picture (Conditional - Use context user) */}
             {user.role === 'farmer' && user.fieldPictureUrl && (
-                 // Restore Original Content:
                  <View style={styles.fieldPictureSection}>
                     <View style={styles.fieldPictureHeader}>
                        <Feather name="image" size={16} color={Colors.neutral[600]} style={styles.infoIcon} />
@@ -166,174 +340,19 @@ export default function ProfileScreen() {
            )}
         </View>
 
-       {/* Action List - Handlers use context user or localUser as appropriate */}
         <View style={styles.actionList}>
             <ActionRow iconName="user" label="Modifier le profil" onPress={handleEditProfile} />
-            <ActionRow iconName="clock" label="Historique des commandes" onPress={handleOrderHistory} /> {/* Feather - clock for History */}
+            <ActionRow iconName="clock" label="Historique des commandes" onPress={handleOrderHistory} />
             <ActionRow iconName="bell" label="Notifications" onPress={handleNotifications} />
             <ActionRow iconName="shield" label="Confidentialité" onPress={handlePrivacy} />
         </View>
 
-       {/* Sign Out Button */}
-       {/* Use a TouchableOpacity for custom styling instead of Button component */}
        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-            <Feather name="log-out" size={20} color={Colors.error.DEFAULT} /> {/* Feather */}
+            <Feather name="log-out" size={20} color={Colors.error.DEFAULT} />
             <Text style={styles.signOutText}>Se déconnecter</Text>
           </TouchableOpacity>
 
       </ScrollView>
   );
+  */
 }
-
-// --- Add new Styles ---
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.neutral[50], // Light background
-  },
-  scrollContent: {
-    paddingBottom: 40, // Space at the bottom
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.neutral[50],
-  },
-   errorText: { // Added error text style
-     color: Colors.error.DEFAULT,
-     fontSize: 16,
-     textAlign: 'center',
-   },
-  // Header Styles
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 20, // Adjust as needed for status bar height
-    paddingBottom: 10,
-    backgroundColor: Colors.neutral.white, // White background for header area maybe? Or keep transparent
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[200],
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600', // Semibold
-    color: Colors.neutral[800],
-  },
-  // User Info Styles
-  userInfoSection: {
-    alignItems: 'center',
-    paddingVertical: 20, // Reduced padding slightly
-    paddingHorizontal: 20, // Added horizontal padding for text alignment
-    backgroundColor: Colors.neutral.white,
-    marginBottom: 10,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.neutral[200],
-    marginBottom: 16,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.neutral[900],
-    marginBottom: 8, // Increased margin
-  },
-   // NEW: Style for info rows (Phone, Role, Location)
-   infoRow: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     marginTop: 6, // Space between rows
-     // Removed phoneContainer style as this replaces it
-  },
-   infoIcon: {
-       marginRight: 8,
-   },
-   infoText: {
-     fontSize: 14,
-     color: Colors.neutral[600],
-   },
-   // NEW: Optional specific styles for Bio row/text
-   bioRow: {
-       alignItems: 'flex-start', // Align icon to top if text wraps
-   },
-   bioText: {
-       flexShrink: 1, // Allow text to shrink and wrap if needed
-       lineHeight: 18, // Adjust line height for readability
-   },
-   // NEW: Styles for Field Picture Section
-   fieldPictureSection: {
-       width: '100%', // Take full width for centering
-       marginTop: 20, // Space above field picture section
-       paddingTop: 15,
-       borderTopWidth: 1,
-       borderTopColor: Colors.neutral[100],
-       alignItems: 'center', // Center the image
-   },
-   fieldPictureHeader: {
-       flexDirection: 'row',
-       alignItems: 'center',
-       marginBottom: 10,
-   },
-   fieldPictureLabel: {
-       fontSize: 14,
-       color: Colors.neutral[600],
-       fontWeight: '500',
-   },
-   fieldPicture: {
-       width: '90%', // Make image slightly less than full width
-       height: 150, // Keep height or adjust as needed
-       borderRadius: 8,
-       backgroundColor: Colors.neutral[200], // Placeholder bg
-   },
-  // Action List Styles
-  actionList: {
-    backgroundColor: Colors.neutral.white,
-    borderRadius: 8, // Optional: adds rounded corners if list isn't edge-to-edge
-    marginHorizontal: 10, // Add margin if not edge-to-edge
-    overflow: 'hidden', // Needed for borderRadius
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.neutral[100], // Lighter separator
-  },
-   actionIconBackground: { // Optional: Circle background for icons
-     width: 36,
-     height: 36,
-     borderRadius: 18,
-     backgroundColor: Colors.primary[50], // Light primary color background
-     justifyContent: 'center',
-     alignItems: 'center',
-     marginRight: 16,
-  },
-  actionLabel: {
-    flex: 1,
-    fontSize: 16,
-    color: Colors.neutral[700],
-  },
-  // Sign Out Button Styles
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.error.light, // Light red background (FIXED: Use light shade)
-    borderRadius: 8,
-    paddingVertical: 14,
-    marginHorizontal: 20, // Give some horizontal margin
-    marginTop: 30, // Space above the button
-  },
-  signOutText: {
-    fontSize: 16,
-    color: Colors.error.DEFAULT, // Red text
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-});
