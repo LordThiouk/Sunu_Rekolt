@@ -29,7 +29,10 @@
 *   **Auth:** Supabase Auth (JWT, phone/password, OTP)
 *   **API:** Supabase Auto-generated REST API (PostgREST), Custom RPC functions.
 *   **Serverless Functions:** Supabase Edge Functions (Deno, TypeScript) - Planned.
-*   **Storage:** Supabase Storage (S3 compatible) - Used for user avatars, field pictures. Uploads done via base64 strings.
+*   **Storage:** Supabase Storage (S3 compatible) is used with two main buckets:
+    *   `user-uploads`: Stores user avatars and farm/field pictures.
+    *   `product-images`: Stores images for agricultural products listed by farmers.
+    Uploads are primarily done via base64 strings or blobs from the client. Both buckets are managed with RLS policies.
 
 ## 3. Integrations
 
@@ -69,7 +72,7 @@
 *   **Network Conditions:** Requires robust error handling. Image upload network errors resolved.
 *   **Dependency Conflicts:** SDK 53 upgrade required `--legacy-peer-deps` due to React 19 / RN 0.79 incompatibilities (e.g., `react-native-web`). Potential runtime instability.
 *   **Scalability:** Monitor Supabase usage.
-*   **Security:** RLS critical; Storage policies need verification.
+*   **Security:** RLS critical; Storage policies for `user-uploads` (profile images) and `product-images` (product listings) have been implemented and should be maintained.
 *   **UI Reactivity:** Experiencing issues with immediate UI updates for images after context changes.
 *   **TypeScript:** Type mismatches between DB (`null`) and frontend types (`undefined`) required workarounds (casting).
 *   **Styling Inconsistency:** Mixed use of StyleSheet.create and TailwindCSS/NativeWind classes causing application issues. Potential need to standardize on one approach.

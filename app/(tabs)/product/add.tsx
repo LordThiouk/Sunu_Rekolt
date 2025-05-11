@@ -67,7 +67,7 @@ export default function AddProductScreen() {
       // Get file name and extension
       const fileExt = uri.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `products/${fileName}`;
+      const filePath = `products/${user.id}/${fileName}`;
 
       // Convert image to blob
       const response = await fetch(uri);

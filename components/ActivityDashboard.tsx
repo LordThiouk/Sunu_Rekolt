@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import Colors from '@/constants/Colors';
-import { Package, ShoppingBag, TrendingUp, Award } from 'lucide-react-native';
+import { Feather } from '@expo/vector-icons';
 
 interface MonthlyOrderStat {
   month: string; // Format might differ from RPC, adjust if needed
@@ -129,15 +129,15 @@ export default function ActivityDashboard({ farmerId }: { farmerId: string }) {
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
           <View style={[styles.iconContainer, { backgroundColor: Colors.primary[50] }]}>
-            <ShoppingBag size={24} color={Colors.primary.DEFAULT} />
+            <Feather name="shopping-bag" size={24} color={Colors.primary.DEFAULT} />
           </View>
           <Text style={styles.statValue}>{stats.totalOrders}</Text>
-          <Text style={styles.statLabel}>Commandes reçues</Text>
+          <Text style={styles.statLabel}>Commandes Payées (6m)</Text>
         </View>
 
         <View style={styles.statCard}>
           <View style={[styles.iconContainer, { backgroundColor: Colors.secondary[50] }]}>
-            <Package size={24} color={Colors.secondary.DEFAULT} />
+            <Feather name="box" size={24} color={Colors.secondary.DEFAULT} />
           </View>
           <Text style={styles.statValue}>{stats.totalProducts}</Text>
           <Text style={styles.statLabel}>Produits ajoutés</Text>
@@ -146,8 +146,8 @@ export default function ActivityDashboard({ farmerId }: { farmerId: string }) {
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <TrendingUp size={20} color={Colors.neutral[700]} />
-          <Text style={styles.sectionTitle}>Évolution des ventes</Text>
+          <Feather name="trending-up" size={20} color={Colors.neutral[700]} />
+          <Text style={styles.sectionTitle}>Évolution des Commandes Payées</Text>
         </View>
         <View style={styles.chart}>
           {stats.monthlyOrders.map((data, index) => (
@@ -173,7 +173,7 @@ export default function ActivityDashboard({ farmerId }: { farmerId: string }) {
       {stats.topProduct && (
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Award size={20} color={Colors.neutral[700]} />
+            <Feather name="award" size={20} color={Colors.neutral[700]} />
             <Text style={styles.sectionTitle}>Produit le plus vendu</Text>
           </View>
           <View style={styles.topProduct}>
