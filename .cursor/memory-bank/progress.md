@@ -20,7 +20,7 @@
 3. **UI & Navigation**
    - Welcome/login/register screens ✅
    - Tab-based navigation with role-specific tabs (Farmer: Dashboard, Produits, Catalogue, Profil; Buyer: Catalogue, Panier, Commandes, Profil) ✅
-   - Farmer Dashboard (`app/(tabs)/farmer-dashboard.tsx`) UI with placeholders for sales, orders, reliability, and "Add Product" button ✅
+   - Farmer Dashboard (`app/(tabs)/farmer-dashboard.tsx`) UI now connected to live data (Reliability Score, New Orders, Sales via RPC, Activity via ActivityDashboard component) ✅
    - Consistent header with app name, logo, and notification bell ✅
    - Basic profile viewing and editing ✅
    - Basic form validation ✅
@@ -31,11 +31,13 @@
    - Database migrations via Supabase CLI ✅
    - Custom RPC function for order details ✅
    - Function for calculating reliability scores ✅
+   - Supabase Storage for product images (`product-images` bucket) with RLS allowing farmer-specific uploads/management and public reads ✅
+   - RPC function `get_farmer_sales_summary` for Farmer Dashboard sales metrics ✅
 
 ## In Progress
 
 1. **Frontend**
-   - Farmer Dashboard: Connect metrics to Supabase data, implement button actions 🔄
+   - Farmer Dashboard: Live data integration complete. Minor UI tweaks or additional metrics if needed. ✅
    - Farmer Sections: Develop "Mes Produits" (`my-products.tsx`) and "Commandes" (`farmer-orders.tsx`) screens 🔄
    - Notification list screen 🔄
    - Review submission flow 🔄
@@ -52,7 +54,7 @@
    - Testing notification triggers 🔄
 
 3. **Feature Development**
-   - Complete product CRUD process 🔄
+   - Complete product CRUD process (image upload functionality now working, remaining aspects like admin approval flow in progress) 🔄
    - Order lifecycle management 🔄
    - Admin panel for product approval 🔄
    - SMS notifications system 🔄
@@ -68,7 +70,7 @@
 ## Not Started
 
 1. **Features**
-   - Push notifications ❌
+   - Push notifications (Backend server-side trigger implementation on hold pending Supabase paid plan for Vault) 🟡
    - Reporting tools for admins ❌
    - Analytics dashboard ❌
    - Offline functionality ❌
@@ -134,33 +136,40 @@ This milestone represents the core marketplace functionality to enable farmers a
    - Migration file: `20250508184309_fix_user_alerts_rls.sql`
    - Status: ✅ Fixed and deployed
 
+2. **Product Image Upload "Bucket Not Found" Error** (FIXED)
+   - Issue: Adding a new product failed with "Bucket not found" when trying to upload the product image.
+   - Fix: 
+     - Created a new dedicated Supabase Storage bucket named `product-images`.
+     - Updated `app/(tabs)/product/add.tsx` to use this bucket and to structure image paths as `products/<FARMER_ID>/<FILENAME>`.
+     - Implemented RLS policies for the `product-images` bucket via migration `20250510232515_create_rls_for_product_images_bucket.sql` to allow public reads and farmer-specific management of their images.
+   - Status: ✅ Fixed and deployed
+
 ## Progress - Push Notifications Feature
 
+**Overall Status: On Hold / Partially Implemented**
+
 **What Works:**
-*   **Client Push Token Registration:** App successfully registers for Expo push notifications, and the token (`ExponentPushToken[qBvYe7BggYlWt2cnWTBWpf]`) is saved to the `profiles` table for the test user.
+*   **Client Push Token Registration:** App successfully registers for Expo push notifications, and the token is saved to the `profiles` table.
 *   **Database Setup:** `user_alerts` table created.
-*   **DB Trigger:** `on_new_user_alert_send_push_row` trigger is created and attached to `user_alerts`.
-*   **Edge Function:** `send-expo-push-notification` Edge Function is deployed.
-*   **Trigger to Edge Function Call (via temporary hardcoding):** Confirmed that the DB trigger *can* successfully invoke the Edge Function when a Service Role Key is available.
+*   **Initial DB Trigger:** `on_new_user_alert_send_push_row` trigger and `trigger_send_push_notification_for_row` function created (migration `20250509131604_create_trigger_send_push_notification.sql`).
+*   **Edge Function Stub:** `send-expo-push-notification` Edge Function code exists.
 *   **FCM Server Key:** The FCM Server Key has been configured in EAS credentials.
 *   **Foreground Notification Handling:** App's notification handler processes notifications when the app is in the foreground.
 
-**What's Left to Build/Fix:**
-1.  **End-to-End Push Notification Delivery:** Confirm successful push notification delivery to the device now that the FCM Server Key is configured.
-2.  **Secure Service Role Key Access for DB Trigger (Production Viability):**
-    *   **Vault Issue:** Resolve the `ERROR: schema "supabase_vault" does not exist` problem. This is critical for securely fetching the Service Role Key in the trigger. Likely a Supabase free tier limitation or misconfiguration.
-    *   **Alternative (if Vault fails):** If Vault is not a viable option on the free tier, an alternative secure method for the trigger to authenticate its call to the Edge Function needs to be implemented.
-3.  **EAS Build Configuration:** Fix the `slug` vs `extra.eas.projectId` mismatch warning to ensure clean and correctly associated EAS builds.
-4.  **Refinement & Testing:**
-    *   Test push notifications thoroughly when the app is in the background or killed.
-    *   Ensure no hardcoded keys or temporary test code remains in any production path.
-    *   Consider error handling and retry mechanisms in the push notification pipeline.
+**What's Left to Build/Fix (On Hold):**
+1.  **Secure Service Role Key Access for DB Trigger (Production Viability):**
+    *   **Decision:** This will be addressed by implementing **Supabase Vault** once the project is on a Supabase paid plan. Vault will be used to securely store and provide the necessary credentials (e.g., Service Role Key or a specific API key for the Edge Function) to the PL/pgSQL trigger.
+    *   The current trigger function (`trigger_send_push_notification_for_row`) and the Edge Function (`send-expo-push-notification`) will need to be updated to integrate with Vault.
+2.  **Edge Function Deployment & Configuration:** Final deployment and configuration of the `send-expo-push-notification` Edge Function once Vault integration is ready.
+3.  **End-to-End Push Notification Delivery Test:** Full testing once the backend is securely configured.
+4.  **EAS Build Configuration:** Fix the `slug` vs `extra.eas.projectId` mismatch warning.
+5.  **Refinement & Testing:** Test background/killed states, ensure robust error handling.
 
-**Current Status:**
-*   The push notification pipeline is substantially built. The main components (client token, DB trigger, Edge Function) are in place.
-*   The immediate blocker for a fully secure and functional pipeline is the inability of the DB trigger to access the Service Role Key via Supabase Vault (likely due to free tier constraints).
-*   An FCM configuration issue was identified and resolved. Ready for a full end-to-end test once the trigger can be safely (even if temporarily) enabled with a valid key.
+**Current Status & Blocker:**
+*   Client-side setup for receiving push notifications is largely in place.
+*   Backend implementation for server-triggered push notifications (DB trigger -> Edge Function) is **ON HOLD**.
+*   **Primary Blocker:** Securely providing credentials from the database trigger to the Edge Function. Supabase Vault (unavailable on free tier) is the planned solution. Attempts to use GUCs or a pre-shared key workaround faced limitations with user permissions on the free tier.
 
-**Known Issues:**
-*   **Supabase Vault:** `ERROR: schema "supabase_vault" does not exist` prevents the DB trigger from using `supabase_vault.secret_get()` to obtain the Service Role Key. This is the primary blocker for a secure implementation on the free tier.
+**Known Issues (Related to Push Notifications):**
+*   **Supabase Vault Unavailability on Free Tier:** Prevents the currently preferred method for secure secret management for the DB trigger.
 *   **EAS Build Warning:** `Project config: Slug for project identified by "extra.eas.projectId" (bolt-expo-nativewind) does not match the "slug" field (sunurekolt)`. 

@@ -69,8 +69,30 @@
 *   **Authentication:** Phone/Password + OTP (Twilio integration planned), managed by Supabase Auth.
 *   **Authorization:** Row Level Security (RLS) policies enforce data access based on user roles (`farmer`, `buyer`, `admin`) and context (e.g., phone visibility post-order).
 *   **Data Modeling:** Relational database (PostgreSQL) with tables like `profiles`, `products`, `orders`, `order_items`, `refunds`, `user_alerts`, `reviews`.
-*   **API Access:** Direct calls to Supabase REST API (auto-generated) and custom RPC functions (`get_order_details_for_farmer`) from the frontend client (`@supabase/supabase-js`).
-*   **Storage:** User uploads (avatar, field pictures) stored in Supabase Storage buckets (`user-uploads`) with RLS policies for access control. Upload implemented using base64 strings via JS client.
+    *   **`orders` table schema (observed):**
+        *   `id` (uuid, primary key)
+        *   `buyer_id` (uuid, foreign key to `profiles.id`)
+        *   `total` (numeric) - Likely the total amount for the order.
+        *   `status` (text) - e.g., 'paid', 'received', 'pending_farmer_action', 'delivering', 'cancelled'.
+        *   `payment_method` (text)
+        *   `created_at` (timestamp with time zone)
+        *   `updated_at` (timestamp with time zone)
+        *   `delivery_address` (text, nullable)
+        *   `delivery_details` (text, nullable)
+        *   *Note: Does not directly contain `farmer_id`. Farmer association is through `order_items` -> `products`.*
+    *   **`order_items` table schema (observed):**
+        *   `id` (uuid, primary key)
+        *   `order_id` (uuid, foreign key to `orders.id`)
+        *   `product_id` (uuid, foreign key to `products.id`)
+        *   `farmer_id` (uuid, foreign key to `profiles.id`) - *This was observed in an example row, indicating denormalization or a specific setup for farmer attribution per item.*
+        *   `quantity` (integer)
+        *   `price_at_time` (numeric) - Price of one unit of the product when the order was placed.
+        *   `created_at` (timestamp with time zone)
+*   **API Access:** Direct calls to Supabase REST API (auto-generated) and custom RPC functions (`get_order_details_for_farmer`, `get_farmer_sales_summary`) from the frontend client (`@supabase/supabase-js`).
+*   **Storage:** User uploads are managed in dedicated Supabase Storage buckets:
+    *   `user-uploads`: For profile avatars and field pictures. Images are stored with paths like `avatars/<USER_ID>/<FILENAME>` or `fields/<USER_ID>/<FILENAME>`.
+    *   `product-images`: For product images. Images are stored with paths like `products/<FARMER_ID>/<FILENAME>`. This path structure was implemented in `app/(tabs)/product/add.tsx`.
+    *   Both buckets are secured with RLS policies for access control. Uploads are primarily implemented using base64 strings or blobs via the JS client.
 *   **Edge Functions:** Planned for server-side logic requiring secrets (Twilio SMS, PayDunya payments/refunds).
 *   **Database Functions/Triggers:** 
     * Used for data consistency (`updated_at` timestamps)
@@ -125,7 +147,7 @@
 *   API keys (Twilio, PayDunya) stored securely as Supabase Edge Function secrets, never exposed client-side.
 *   Input validation on client (Zod) and server (DB constraints, Edge Function logic).
 *   HTTPS enforced for all communication.
-*   Supabase Storage access controlled via RLS policies (needs verification, especially for uploads).
+*   Supabase Storage access for `user-uploads` and `product-images` buckets is controlled via specific RLS policies. The `product-images` RLS policies ensure farmers can only manage images in their designated folders.
 *   Notification privacy enforced via RLS policies (users can only see their own notifications).
 *   Reviews visible to all but can only be created by the buyer in an order.
 
@@ -164,6 +186,13 @@ Supabase RLS policies control data access based on user roles and ownership:
 
 #### order_items
 - **INSERT**: Policy "Prevent ordering own products" checks that `(SELECT p.farmer_id FROM public.products p WHERE p.id = product_id) <> auth.uid()`. This prevents a user from adding a product to an order if they are the farmer who listed that product. 
+
+#### storage.objects (product-images bucket)
+- **SELECT**: Public read access is allowed for all objects in the `product-images` bucket.
+- **INSERT**: Authenticated users with the 'farmer' role can upload to a path `products/<THEIR_USER_ID>/<FILENAME>`.
+- **UPDATE**: Authenticated users with the 'farmer' role can update objects within their own `products/<THEIR_USER_ID>/` path.
+- **DELETE**: Authenticated users with the 'farmer' role can delete objects from their own `products/<THEIR_USER_ID>/` path.
+- *Note: These policies were implemented in migration `20250510232515_create_rls_for_product_images_bucket.sql`.*
 
 ## Navigation Patterns
 

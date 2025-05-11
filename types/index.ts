@@ -21,7 +21,7 @@ export interface Product {
   quantity: number;
   unit: string; // kg, ton, bag, etc.
   category: string;
-  imageUrl: string;
+  image_url: string;
   farmerId: string;
   farmerName?: string;
   isApproved: boolean;

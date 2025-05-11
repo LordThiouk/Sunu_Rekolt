@@ -1,36 +1,45 @@
 # Active Context - Sunu Rekolt
 
+## Recently Achieved Goal
+Resolved critical "Bucket not found" error for product image uploads. This involved:
+*   Deciding to use a separate `product-images` bucket for product listings.
+*   Manually creating the `product-images` bucket in Supabase.
+*   Modifying `app/(tabs)/product/add.tsx` to use the `product-images` bucket and include `farmer_id` in the image path (`products/<FARMER_ID>/<FILENAME>`).
+*   Creating and applying a new database migration (`20250510232515_create_rls_for_product_images_bucket.sql`) to establish RLS policies for the `product-images` bucket, ensuring farmers can manage their own images.
+*   **Connected Farmer Dashboard to live data:**
+    *   Successfully fetched and displayed live data for metrics: Reliability Score, New Orders Count (status 'paid').
+    *   Created and deployed a new Supabase RPC function `get_farmer_sales_summary(farmer_id_param uuid)` to calculate total sales and current month sales (based on orders with status 'received' and using `price_at_time` from `order_items`). This involved iterative debugging of the SQL to correctly reference table columns (e.g., `price_at_time` instead of `price` in `order_items`, and deriving farmer association via `order_items` -> `products` instead of a direct `farmer_id` on the `orders` table).
+    *   Integrated the existing `ActivityDashboard` component into the Farmer Dashboard screen, which fetches its own activity data (total products, monthly order counts, top product) using the farmer's ID.
+
 ## Current Goal
-Complete Phase 3 of the push notification implementation: Deploy the `send-expo-push-notification` Supabase Edge Function, configure its server-side triggering mechanism via the database, and test the end-to-end flow.
+Review other pending tasks or features now that the Farmer Dashboard is connected to live data. Defer full server-side push notification implementation (DB trigger to Edge Function) until Supabase paid plan allows for Vault usage for secure key management. Client-side push token registration is functional.
 
 ## Recent Changes & Discoveries
-*   **`.env` File Issues Resolved:** Successfully troubleshooted and resolved formatting errors in the project's `.env` file that were preventing Supabase CLI commands (like `supabase db push`) from executing.
-*   **Database Migration for Trigger Applied:** The migration file `supabase/migrations/20250509131604_create_trigger_send_push_notification.sql` was successfully applied. This created:
-    *   The `plpgsql` function `public.trigger_send_push_notification_for_row()`.
-    *   The `AFTER INSERT ON public.user_alerts FOR EACH ROW` trigger `on_new_user_alert_send_push_row` which calls the aforementioned function.
-    *   This trigger is designed to call the `send-expo-push-notification` Edge Function when a new important alert is inserted.
-*   **Edge Function Code Created:**
-    *   The core logic for the `send-expo-push-notification` Edge Function is written in `supabase/functions/send-expo-push-notification/index.ts`.
-    *   A helper file `supabase/functions/_shared/cors.ts` was also created.
-    *   Local Deno linting issues (`Cannot find name 'Deno'`) persist in the IDE for the Edge Function code, likely due to VS Code/Deno language server configuration. The code structure is intended to be correct for the Supabase Deno runtime.
-*   **Docker Confirmed Running:** The user has confirmed that Docker Desktop is now installed and running, which was a blocker for deploying the Edge Function.
-*   **Identified Next Steps for Trigger Authentication:** The `plpgsql` trigger function requires the Supabase Service Role Key to make an authenticated call to the JWT-protected Edge Function. This key needs to be set as a PostgreSQL configuration variable (e.g., `app_settings.supabase_service_key`).
+*   **Product Image Upload Functionality Restored & Verified.**
+*   **Farmer Dashboard Live Data Integration:**
+    *   `app/(tabs)/farmer-dashboard.tsx` updated to fetch reliability score, new orders count, and sales data.
+    *   RPC function `get_farmer_sales_summary` created via migration `supabase/migrations/20250511015623_create_farmer_sales_summary_rpc.sql`. Troubleshooting involved correcting column name references within the SQL (e.g., `orders.farmer_id` to an indirect lookup, `order_items.price` to `order_items.price_at_time`) and resolving migration history sync issues with `supabase db pull` and `supabase migration repair` before successfully applying the migration with `supabase db push`.
+    *   `ActivityDashboard` component confirmed to be functional and integrated, fetching its own data.
+*   **Clarification of `ActivityDashboard` Data & Labels:**
+    *   Identified that the RPC functions used by `ActivityDashboard.tsx` (`get_farmer_monthly_sales`, `get_farmer_top_products`) filter orders by `status = 'paid'`, not `status = 'received'`.
+    *   Updated labels in `ActivityDashboard.tsx` for clarity: "Commandes reçues" changed to "Commandes Payées (6m)" and chart title "Évolution des ventes" changed to "Évolution des Commandes Payées". This ensures the UI accurately reflects the underlying data related to paid orders rather than completed sales (received orders).
+*   **Resolution of `lucide-react-native` Import Error:**
+    *   Identified and fixed an import error in `components/ActivityDashboard.tsx` that was attempting to use the uninstalled `lucide-react-native` package.
+    *   Replaced `lucide-react-native` icons with equivalents from `@expo/vector-icons/Feather`.
+*   **`.env` File Issues Resolved.**
+*   **Database Migration for Initial Push Notification Trigger Applied** (functionality on hold).
+*   **Edge Function Code Created for Push Notifications** (functionality on hold).
+*   **Push Notification Backend Configuration Challenges & Deferral:** Confirmed Vault unavailability on free tier and insufficient permissions for GUC-based secret management, leading to deferral of backend push notification work.
+*   **Docker Confirmed Running.**
 
 ## Next Immediate Steps
-1.  **Deploy Edge Function:** Attempt to deploy the `send-expo-push-notification` Edge Function using the command: `supabase functions deploy send-expo-push-notification --no-verify-jwt`.
-2.  **Set Edge Function Secrets:** If deployment is successful, set the required environment variables for the *deployed* function using `supabase secrets set`:
-    *   `EXPO_PUBLIC_SUPABASE_URL`
-    *   `EXPO_PUBLIC_SUPABASE_SERVICE_ROLE_KEY`
-3.  **Set PostgreSQL Configuration Variable (CRUCIAL):** The user must manually execute an `ALTER DATABASE postgres SET app_settings.supabase_service_key = 'YOUR_SERVICE_ROLE_KEY';` command in their Supabase SQL Editor. This allows the database trigger to retrieve the service role key and make an authenticated call to the Edge Function.
-4.  **End-to-End Test:**
-    *   Insert a new 'high' or 'critical' importance alert into the `user_alerts` table.
-    *   Verify PostgreSQL logs for trigger activity.
-    *   Verify Edge Function logs for invocation and Expo API response.
-    *   Verify push notification receipt on a test device.
+1.  **Identify and prioritize the next feature or task for development.**
+2.  (Previously completed) Verify Product Image Uploads.
+3.  (Previously completed) Revert/Remove Pre-Shared Key Migration for push notifications.
 
 ## Open Questions/Decisions
-*   How will the user ensure the `app_settings.supabase_service_key` PostgreSQL configuration variable is set securely and correctly?
 *   Strategy for addressing local Deno linting issues in VS Code for Edge Functions (user to investigate Deno VS Code extension setup).
+*   Push notification architecture for server-side triggers will be revisited with Vault once on a Supabase paid plan.
 
 ## Current Focus
 
