@@ -61,7 +61,8 @@
 *   `@expo/vector-icons`: Icon library.
 *   `expo-image`: Optimized image handling.
 *   `expo-image-picker`: Image selection from device.
-*   `expo-file-system`: File system access (used for image upload).
+*   `expo-file-system`: File system access. Used for reading image files as base64, a key part of the fix for image uploads in Expo Go.
+*   `base64-arraybuffer`: Library to convert base64 strings to ArrayBuffers, used in conjunction with `expo-file-system` for reliable image uploads from Expo Go.
 *   `react-native-url-polyfill`: Supabase JS compatibility.
 *   `@expo-google-fonts/baloo-bhai-2`: Custom typography for branding elements.
 *   `@expo-google-fonts/inter`: Typography for general text.

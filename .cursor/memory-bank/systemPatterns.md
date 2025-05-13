@@ -60,7 +60,14 @@
 *   **Image Handling:**
     *   Display: `expo-image`.
     *   Selection: `expo-image-picker`.
-    *   Upload Prep: `expo-file-system` used to read image as base64 string for direct upload via Supabase client.
+    *   Upload Prep:
+        *   **Primary Method (e.g., Add Product):** `expo-file-system` can be used to read image as base64 string for direct upload via Supabase client, or `fetch(uri).blob()` if proven reliable in the target environment. *(The `app/(tabs)/product/add.tsx` likely uses the blob method, verify if it also needs the ArrayBuffer fix for Expo Go if issues arise there).*
+        *   **Expo Go Workaround (e.g., Edit Product - `app/product/edit/[id].tsx`):** Due to issues with `fetch(uri).blob()` resulting in 0-byte files in Expo Go, a reliable pattern is:
+            1.  Read the image URI using `FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 })` to get a base64 string.
+            2.  Decode the base64 string into an `ArrayBuffer` using `decode()` from the `base64-arraybuffer` library.
+            3.  Upload this `ArrayBuffer` directly using the Supabase client: `supabase.storage.from('product-images').upload(filePath, arrayBuffer, { contentType })`.
+    *   Upload Execution: `supabase.storage.from('product-images').upload(filePath, fileBody, { contentType })`.
+    *   Path Structure: `products/<FARMER_ID>/<FILENAME>` in `product-images` bucket.
 *   **Asynchronous Operations:** `async/await` with error handling (e.g., Supabase calls, image uploads).
 *   **Type Safety:** TypeScript used throughout the codebase. Encountered issues matching DB `null` values with frontend `undefined` types, addressed with casting.
 

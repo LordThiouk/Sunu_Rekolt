@@ -1,0 +1,36 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "Running pre-commit hook: Scanning for secrets..."
+
+# Scan for secrets with the direct detect-secrets command (Python version)
+# This assumes `detect-secrets` is in the system PATH
+detect-secrets scan --baseline .secrets.baseline
+SCAN_RESULT=$?
+
+if [ $SCAN_RESULT -ne 0 ]; then
+  echo "Secrets scan failed. Potential new secrets detected or baseline issue."
+  echo "Please review the findings. If these are not secrets, you may need to update your baseline by running:"
+  echo "  detect-secrets scan > .secrets.baseline  (to recreate from scratch)"
+  echo "  OR"
+  echo "  detect-secrets audit .secrets.baseline (to review and update existing baseline)"
+  echo "Then, add the updated .secrets.baseline to your commit."
+  exit 1
+fi
+
+# If the scan was successful and potentially updated the baseline (by blessing new non-secrets during an interactive audit),
+# add the baseline to the commit.
+# Note: `detect-secrets scan` doesn't automatically update the baseline file unless you specifically tell it to.
+# For a typical pre-commit flow, you would first run `detect-secrets scan > .secrets.baseline` to create it,
+# then `detect-secrets audit .secrets.baseline` to review and bless findings.
+# The command below is more for if you *manually* update the baseline and want to ensure it's included.
+# A better approach might be to run `detect-secrets scan --baseline .secrets.baseline` which fails if new secrets are found.
+
+# For now, let's assume the baseline is managed. If the scan passes, all is good.
+# If you want to automatically add a potentially modified baseline:
+# if [ -f .secrets.baseline ]; then
+#   git add .secrets.baseline
+# fi
+
+echo "Secrets scan passed."
+exit 0
