@@ -1,45 +1,62 @@
 # Active Context - Sunu Rekolt
 
 ## Recently Achieved Goal
-Resolved critical "Bucket not found" error for product image uploads. This involved:
-*   Deciding to use a separate `product-images` bucket for product listings.
-*   Manually creating the `product-images` bucket in Supabase.
-*   Modifying `app/(tabs)/product/add.tsx` to use the `product-images` bucket and include `farmer_id` in the image path (`products/<FARMER_ID>/<FILENAME>`).
-*   Creating and applying a new database migration (`20250510232515_create_rls_for_product_images_bucket.sql`) to establish RLS policies for the `product-images` bucket, ensuring farmers can manage their own images.
-*   **Connected Farmer Dashboard to live data:**
-    *   Successfully fetched and displayed live data for metrics: Reliability Score, New Orders Count (status 'paid').
-    *   Created and deployed a new Supabase RPC function `get_farmer_sales_summary(farmer_id_param uuid)` to calculate total sales and current month sales (based on orders with status 'received' and using `price_at_time` from `order_items`). This involved iterative debugging of the SQL to correctly reference table columns (e.g., `price_at_time` instead of `price` in `order_items`, and deriving farmer association via `order_items` -> `products` instead of a direct `farmer_id` on the `orders` table).
-    *   Integrated the existing `ActivityDashboard` component into the Farmer Dashboard screen, which fetches its own activity data (total products, monthly order counts, top product) using the farmer's ID.
+Significant enhancements to product management, including a fully functional "Edit Product" screen with a working image upload solution for Expo Go, and the implementation of "Archive/Unlist" and advanced filtering features on the "Mes Produits" screen. Farmer Dashboard live data integration was previously completed.
 
 ## Current Goal
-Review other pending tasks or features now that the Farmer Dashboard is connected to live data. Defer full server-side push notification implementation (DB trigger to Edge Function) until Supabase paid plan allows for Vault usage for secure key management. Client-side push token registration is functional.
+With core product management (Add, Edit, Delete, Archive, Filter) for farmers largely complete and functional in Expo Go, the next focus can be on other key areas such as farmer order management, buyer-side features (cart, checkout), or administrative functionalities like product approval.
 
 ## Recent Changes & Discoveries
-*   **Product Image Upload Functionality Restored & Verified.**
-*   **Farmer Dashboard Live Data Integration:**
+
+*   **Product Management Overhaul (Completed):**
+    *   **"Edit Product" Screen (`app/product/edit/[id].tsx`):**
+        *   Successfully implemented screen to fetch existing product data, pre-fill form, and update details.
+        *   **Image Upload Fix for Expo Go:** Resolved the 0-byte image upload issue by modifying `uploadImage` function. The new method uses `FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 })` to get a base64 string, then `decode(base64)` (from `base64-arraybuffer`) to create an `ArrayBuffer`. This `ArrayBuffer` is successfully uploaded via `supabase.storage.from('product-images').upload()`. This is now the confirmed working method for image uploads from Expo Go in this screen.
+    *   **"Mes Produits" Screen Enhancements (`app/(tabs)/my-products.tsx`):**
+        *   **Archive/Unlist Functionality:**
+            *   `is_archived` boolean field added to `products` table via migration `20250512234143_add_is_archived_to_products.sql`.
+            *   Frontend types (`Product`, `FarmerProduct`) updated.
+            *   Implemented `handleToggleArchive` function to update product's `is_archived` status in Supabase and refresh UI.
+            *   UI updated with archive/unarchive icons (eye/eye-off) and visual styling (dimming) for archived items.
+        *   **Status-Based Filtering:**
+            *   Implemented robust client-side filtering for products: "Tous" (shows non-archived), "En attente", "Approuvés".
+            *   Added a dedicated "Archivés" filter to view only archived products.
+        *   **Edit Product Navigation:** Button navigates to `app/product/edit/[id].tsx`.
+        *   **Delete Product:** Functionality with confirmation and image deletion from storage is in place.
+
+*   **Product Image Upload Functionality Restored & Verified (for Add Product and Edit Product).**
+*   **Farmer Dashboard Live Data Integration (Previously Completed):**
     *   `app/(tabs)/farmer-dashboard.tsx` updated to fetch reliability score, new orders count, and sales data.
-    *   RPC function `get_farmer_sales_summary` created via migration `supabase/migrations/20250511015623_create_farmer_sales_summary_rpc.sql`. Troubleshooting involved correcting column name references within the SQL (e.g., `orders.farmer_id` to an indirect lookup, `order_items.price` to `order_items.price_at_time`) and resolving migration history sync issues with `supabase db pull` and `supabase migration repair` before successfully applying the migration with `supabase db push`.
-    *   `ActivityDashboard` component confirmed to be functional and integrated, fetching its own data.
-*   **Clarification of `ActivityDashboard` Data & Labels:**
-    *   Identified that the RPC functions used by `ActivityDashboard.tsx` (`get_farmer_monthly_sales`, `get_farmer_top_products`) filter orders by `status = 'paid'`, not `status = 'received'`.
-    *   Updated labels in `ActivityDashboard.tsx` for clarity: "Commandes reçues" changed to "Commandes Payées (6m)" and chart title "Évolution des ventes" changed to "Évolution des Commandes Payées". This ensures the UI accurately reflects the underlying data related to paid orders rather than completed sales (received orders).
-*   **Resolution of `lucide-react-native` Import Error:**
-    *   Identified and fixed an import error in `components/ActivityDashboard.tsx` that was attempting to use the uninstalled `lucide-react-native` package.
-    *   Replaced `lucide-react-native` icons with equivalents from `@expo/vector-icons/Feather`.
-*   **`.env` File Issues Resolved.**
-*   **Database Migration for Initial Push Notification Trigger Applied** (functionality on hold).
-*   **Edge Function Code Created for Push Notifications** (functionality on hold).
-*   **Push Notification Backend Configuration Challenges & Deferral:** Confirmed Vault unavailability on free tier and insufficient permissions for GUC-based secret management, leading to deferral of backend push notification work.
-*   **Docker Confirmed Running.**
+    *   RPC function `get_farmer_sales_summary` created and working.
+    *   `ActivityDashboard` component functional and integrated.
+*   **Clarification of `ActivityDashboard` Data & Labels (Previously Completed).**
+*   **Resolution of `lucide-react-native` Import Error (Previously Completed).**
+*   **`.env` File Issues Resolved (Previously Completed).**
+*   **Push Notification Work (On Hold - Previously Noted):**
+    *   Database Migration for Initial Push Notification Trigger Applied (functionality on hold).
+    *   Edge Function Code Created for Push Notifications (functionality on hold).
+    *   Push Notification Backend Configuration Challenges & Deferral (Vault unavailability on free tier).
+*   **Docker Confirmed Running (Previously Noted).**
+
 
 ## Next Immediate Steps
-1.  **Identify and prioritize the next feature or task for development.**
-2.  (Previously completed) Verify Product Image Uploads.
-3.  (Previously completed) Revert/Remove Pre-Shared Key Migration for push notifications.
+1.  **Prioritize Next Feature Block:** Decide whether to focus on:
+    *   Farmer Order Management (`app/(tabs)/farmer-orders.tsx`).
+    *   Buyer-side features (e.g., Cart, Checkout).
+    *   Admin panel (e.g., Product Approval workflow).
+2.  Perform thorough testing of the new product management features (Edit, Archive, Filters).
+3.  Address any minor UI/UX refinements for the product management screens.
 
 ## Open Questions/Decisions
-*   Strategy for addressing local Deno linting issues in VS Code for Edge Functions (user to investigate Deno VS Code extension setup).
-*   Push notification architecture for server-side triggers will be revisited with Vault once on a Supabase paid plan.
+*   Strategy for addressing local Deno linting issues in VS Code for Edge Functions.
+*   Push notification architecture for server-side triggers (revisit with Vault on Supabase paid plan).
+*   iOS build strategy (Catalina/Xcode 12.4 limitations - currently parked).
+
+## Build & Environment Notes
+*   **Expo Go Image Upload Solution:** For `app/product/edit/[id].tsx`, the `fetch(uri).blob()` method for image uploads was unreliable in Expo Go (resulting in 0-byte files). Switching to `FileSystem.readAsStringAsync` (to get base64) -> `decode` (to get ArrayBuffer) -> Supabase upload fixed this for Expo Go. This pattern should be considered for other image uploads if similar issues arise in Expo Go.
+*   **iOS Build Issues (Parked):**
+    *   Encountered `plutil` error during EAS Build, likely due to using an old Xcode version (12.4) on macOS Catalina. Modern Expo SDKs/EAS Build expect newer Xcode.
+    *   Previous EAS builds for iOS simulator also failed due to the app requiring a newer iOS version (e.g., 15.1) than what the Catalina-compatible Xcode 12.4 simulators provide (e.g., 14.4).
 
 ## Current Focus
 

@@ -24,8 +24,9 @@ export interface Product {
   image_url: string;
   farmerId: string;
   farmerName?: string;
-  isApproved: boolean;
+  is_approved: boolean;
   createdAt: string;
+  is_archived: boolean;
 }
 
 export interface CartItem {

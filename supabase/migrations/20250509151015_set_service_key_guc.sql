@@ -23,7 +23,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Call the function to set the key
 -- !!! IMPORTANT: MANUALLY REPLACE THE PLACEHOLDER BELOW WITH YOUR ACTUAL SERVICE ROLE KEY !!!
-SELECT public.set_service_key('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJpcGxldnp3bnp5cmxzZ293a2tlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NTg1Nzg3NiwiZXhwIjoyMDYxNDMzODc2fQ.A_30k3AJ8b1q333KR6nZUqQXmPTVEG8VSW0eicFV38o');
+SELECT public.set_service_key('');
 
 -- Optional: Revoke execute permission on the function after use if desired for security,
 -- though for a one-time setup this might be overkill.
